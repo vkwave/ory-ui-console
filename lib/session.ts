@@ -5,7 +5,7 @@ export interface SessionData {
   admin?: { email: string };
 }
 
-const sessionOptions: SessionOptions = {
+export const sessionOptions: SessionOptions = {
   cookieName: process.env.SESSION_COOKIE_NAME ?? "ory_console_session",
   password: process.env.SESSION_SECRET ?? "fallback-dev-secret-must-be-32-chars",
   cookieOptions: {
