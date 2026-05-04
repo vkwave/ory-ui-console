@@ -1,0 +1,24 @@
+services:
+  ory-console:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    environment:
+      - KRATOS_ADMIN_URL=http://kratos:4434
+      - HYDRA_ADMIN_URL=http://hydra:4445
+      - KETO_READ_URL=http://keto:4466
+      - KETO_WRITE_URL=http://keto:4467
+      - SESSION_SECRET=${OC_SESSION_SECRET:-ory-console-secret-32-chars-minimum!!}
+      - SESSION_COOKIE_NAME=ory_console_session
+      - ADMIN_EMAIL=${OC_ADMIN_EMAIL:-dkhozaie@gmail.com}
+      - ADMIN_PASSWORD=${OC_ADMIN_PASSWORD:-Votz2020??}
+    networks:
+      - ory
+    restart: unless-stopped
+
+networks:
+  ory:
+    external: true
+    name: votz_ory
