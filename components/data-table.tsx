@@ -12,9 +12,15 @@ interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
   emptyMessage?: string;
+  keyExtractor?: (row: T, index: number) => string;
 }
 
-export function DataTable<T>({ columns, data, emptyMessage = "No results." }: DataTableProps<T>) {
+export function DataTable<T>({
+  columns,
+  data,
+  emptyMessage = "No results.",
+  keyExtractor,
+}: DataTableProps<T>) {
   return (
     <Table>
       <TableHeader>
@@ -33,7 +39,7 @@ export function DataTable<T>({ columns, data, emptyMessage = "No results." }: Da
           </TableRow>
         ) : (
           data.map((row, i) => (
-            <TableRow key={i}>
+            <TableRow key={keyExtractor ? keyExtractor(row, i) : String(i)}>
               {columns.map((col) => (
                 <TableCell key={col.key}>{col.cell(row)}</TableCell>
               ))}

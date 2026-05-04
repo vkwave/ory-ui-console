@@ -8,7 +8,12 @@ export async function DELETE(
 ) {
   const session = await getSession();
   if (!session.admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { id } = await params;
-  await kratos.revokeSession(id);
-  return NextResponse.json({ ok: true });
+  try {
+    const { id } = await params;
+    await kratos.revokeSession(id);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
