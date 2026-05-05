@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,11 +16,19 @@ const EMPTY_TUPLE: RelationTuple = {
 };
 
 export default function RelationsPage() {
-  const [filter, setFilter] = useState({ namespace: "roles", relation: "", subject_id: "" });
+  const [filter, setFilter] = useState({
+    namespace: "roles",
+    relation: "",
+    subject_id: "",
+  });
   const [tuples, setTuples] = useState<RelationTuple[]>([]);
   const [newTuple, setNewTuple] = useState<RelationTuple>(EMPTY_TUPLE);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    search();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function search() {
     setLoading(true);
@@ -79,17 +87,31 @@ export default function RelationsPage() {
     { key: "namespace", header: "Namespace", cell: (t) => t.namespace },
     { key: "object", header: "Object", cell: (t) => t.object },
     { key: "relation", header: "Relation", cell: (t) => t.relation },
-    { key: "subject", header: "Subject", cell: (t) => t.subject_id ?? JSON.stringify(t.subject_set) },
+    {
+      key: "subject",
+      header: "Subject",
+      cell: (t) => t.subject_id ?? JSON.stringify(t.subject_set),
+    },
     {
       key: "delete",
       header: "",
       cell: (t) => (
-        <Button variant="destructive" size="sm" onClick={() => deleteRelation(t)}>Delete</Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => deleteRelation(t)}
+        >
+          Delete
+        </Button>
       ),
     },
   ];
 
-  const filterFields: Array<{ key: keyof typeof filter; label: string; placeholder: string }> = [
+  const filterFields: Array<{
+    key: keyof typeof filter;
+    label: string;
+    placeholder: string;
+  }> = [
     { key: "namespace", label: "Namespace", placeholder: "roles" },
     { key: "relation", label: "Relation", placeholder: "member" },
     { key: "subject_id", label: "Subject ID", placeholder: "identity UUID" },
@@ -107,32 +129,42 @@ export default function RelationsPage() {
       <h1 className="text-2xl font-bold">Keto Relations</h1>
 
       <Card>
-        <CardHeader><CardTitle>Filter</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Filter</CardTitle>
+        </CardHeader>
         <CardContent className="flex gap-2 flex-wrap items-end">
           {filterFields.map(({ key, label, placeholder }) => (
             <div key={key} className="space-y-1">
               <Label>{label}</Label>
               <Input
                 value={filter[key]}
-                onChange={(e) => setFilter({ ...filter, [key]: e.target.value })}
+                onChange={(e) =>
+                  setFilter({ ...filter, [key]: e.target.value })
+                }
                 placeholder={placeholder}
                 className="w-36"
               />
             </div>
           ))}
-          <Button onClick={search} disabled={loading}>{loading ? "…" : "Search"}</Button>
+          <Button onClick={search} disabled={loading}>
+            {loading ? "…" : "Search"}
+          </Button>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Add Relation</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Add Relation</CardTitle>
+        </CardHeader>
         <CardContent className="flex gap-2 flex-wrap items-end">
           {tupleFields.map(({ key, label }) => (
             <div key={key} className="space-y-1">
               <Label>{label}</Label>
               <Input
                 value={String(newTuple[key] ?? "")}
-                onChange={(e) => setNewTuple({ ...newTuple, [key]: e.target.value })}
+                onChange={(e) =>
+                  setNewTuple({ ...newTuple, [key]: e.target.value })
+                }
                 className="w-36"
               />
             </div>
@@ -145,8 +177,10 @@ export default function RelationsPage() {
       <DataTable
         columns={columns}
         data={tuples}
-        keyExtractor={(t, i) => `${t.namespace}:${t.object}:${t.relation}:${t.subject_id ?? i}`}
-        emptyMessage="No relations found. Run a search first."
+        keyExtractor={(t, i) =>
+          `${t.namespace}:${t.object}:${t.relation}:${t.subject_id ?? i}`
+        }
+        emptyMessage="No relations found."
       />
     </div>
   );

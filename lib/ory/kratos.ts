@@ -47,7 +47,7 @@ export interface CourierMessage {
 
 export const kratos = {
   listIdentities: (page = 1, perPage = 50): Promise<KratosIdentity[]> =>
-    oryFetch(`/admin/identities?page=${page}&per_page=${perPage}`),
+    oryFetch(`/admin/identities?page_size=${perPage}`),
 
   getIdentity: (id: string): Promise<KratosIdentity> =>
     oryFetch(`/admin/identities/${id}?include_credential=oidc`),
@@ -62,7 +62,7 @@ export const kratos = {
     }),
 
   listSessions: (page = 1, perPage = 50): Promise<KratosSession[]> =>
-    oryFetch(`/admin/sessions?page=${page}&per_page=${perPage}&expand=Identity`),
+    oryFetch(`/admin/sessions?page_size=${perPage}&expand=Identity`),
 
   getIdentitySessions: (id: string): Promise<KratosSession[]> =>
     oryFetch(`/admin/identities/${id}/sessions`),
@@ -77,7 +77,10 @@ export const kratos = {
     oryFetch("/schemas"),
 
   listMessages: (page = 1, perPage = 50): Promise<CourierMessage[]> =>
-    oryFetch(`/admin/courier/messages?page=${page}&per_page=${perPage}`),
+    oryFetch(`/admin/courier/messages?page_size=${perPage}`),
+
+  getSchemaContent: (id: string): Promise<Record<string, unknown>> =>
+    oryFetch(`/schemas/${encodeURIComponent(id)}`),
 
   retryMessage: (msgId: string): Promise<CourierMessage> =>
     oryFetch(`/admin/courier/messages/${msgId}/deliver`, { method: "PATCH" }),

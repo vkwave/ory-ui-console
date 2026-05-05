@@ -66,12 +66,15 @@ export const hydra = {
   revokeConsentSessions: (subject: string, client?: string): Promise<null> => {
     const q = client
       ? `?subject=${encodeURIComponent(subject)}&client=${encodeURIComponent(client)}`
-      : `?subject=${encodeURIComponent(subject)}`;
+      : `?subject=${encodeURIComponent(subject)}&all=true`;
     return oryFetch(`/admin/oauth2/auth/sessions/consent${q}`, { method: "DELETE" });
   },
 
-  listJWKSets: (): Promise<string[]> =>
-    oryFetch("/admin/keys"),
+  revokeAllConsentForSubject: (subject: string): Promise<null> =>
+    oryFetch(`/admin/oauth2/auth/sessions/consent?subject=${encodeURIComponent(subject)}&all=true`, { method: "DELETE" }),
+
+  // Hydra has no list-all-sets endpoint; these are the two built-in sets.
+  KNOWN_JWK_SETS: ["hydra.openid.id-token", "hydra.jwt.access-token"] as string[],
 
   getJWKSet: (set: string): Promise<JWKSet> =>
     oryFetch(`/admin/keys/${set}`),

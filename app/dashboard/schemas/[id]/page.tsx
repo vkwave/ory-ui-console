@@ -14,12 +14,7 @@ export default async function SchemaDetailPage({
   let schema: Record<string, unknown> | null = null;
   let error: string | null = null;
   try {
-    const schemas = await kratos.listSchemas();
-    const found = schemas.find((s) => s.id === decodedId);
-    if (found) {
-      const res = await fetch(found.url, { cache: "no-store" });
-      schema = (await res.json()) as Record<string, unknown>;
-    }
+    schema = await kratos.getSchemaContent(decodedId);
   } catch (e) {
     error = String(e);
   }

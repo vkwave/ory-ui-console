@@ -48,6 +48,34 @@ export default function PermissionsPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Permission Check</h1>
 
+      <Card className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30">
+        <CardHeader><CardTitle className="text-base">How Keto Permissions Work</CardTitle></CardHeader>
+        <CardContent className="text-sm space-y-3 text-muted-foreground">
+          <p>
+            Ory Keto implements the <strong>Zanzibar</strong> model: every permission is a relation tuple{" "}
+            <code className="font-mono bg-muted px-1 rounded">(namespace, object, relation, subject)</code>.
+            A permission check asks: <em>"Does subject X have relation Y on object Z in namespace N?"</em>
+          </p>
+          <div>
+            <p className="font-medium text-foreground mb-1">Example tuples (created in Relations):</p>
+            <ul className="list-disc list-inside space-y-1 font-mono text-xs">
+              <li>permissions / create_post / granted / &lt;user-uuid&gt;</li>
+              <li>permissions / delete_post / granted / &lt;admin-uuid&gt;</li>
+              <li>roles / editor / member / &lt;user-uuid&gt;</li>
+            </ul>
+          </div>
+          <div>
+            <p className="font-medium text-foreground mb-1">To check if a user can create a post:</p>
+            <ul className="list-disc list-inside space-y-1 text-xs">
+              <li>Namespace: <code className="font-mono bg-muted px-1 rounded">permissions</code></li>
+              <li>Object: <code className="font-mono bg-muted px-1 rounded">create_post</code></li>
+              <li>Relation: <code className="font-mono bg-muted px-1 rounded">granted</code></li>
+              <li>Subject ID: the user&apos;s Kratos identity UUID</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader><CardTitle>Check Permission</CardTitle></CardHeader>
         <CardContent className="space-y-4">

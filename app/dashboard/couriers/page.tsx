@@ -38,7 +38,11 @@ export default async function CouriersPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Courier Messages</h1>
+      <h1 className="text-2xl font-bold mb-4">Courier Messages</h1>
+      <p className="text-muted-foreground text-sm mb-6">
+        Read-only log of outgoing emails sent by Kratos (verification, recovery, OTP). Courier
+        configuration (SMTP server, templates) is managed in the Kratos YAML config file — not via API.
+      </p>
       {error && <p className="text-destructive mb-4">{error}</p>}
       <DataTable
         columns={columns}
