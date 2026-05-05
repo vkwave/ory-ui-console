@@ -23,13 +23,13 @@ export function JsonViewer({ data, maxHeight = "400px" }: JsonViewerProps) {
       <Button
         size="sm"
         variant="outline"
-        className="absolute top-2 right-2 text-xs"
+        className="glass-control absolute right-2 top-2 text-xs"
         onClick={copy}
       >
         {copied ? "Copied!" : "Copy"}
       </Button>
       <pre
-        className="bg-muted rounded p-4 text-xs overflow-auto"
+        className="overflow-auto rounded-xl border border-border/50 bg-muted/35 p-4 text-xs"
         style={{ maxHeight }}
       >
         {text}

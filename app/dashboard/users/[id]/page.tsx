@@ -2,6 +2,7 @@ import { kratos, KratosSession } from "@/lib/ory/kratos";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, Column } from "@/components/data-table";
+import { PageHeader } from "@/components/page-header";
 import { fmtDate } from "@/lib/utils";
 import { RevokeSessionButton } from "./revoke-session-button";
 import { RevokeAllSessionsButton } from "./revoke-all-sessions-button";
@@ -44,17 +45,33 @@ export default async function UserDetailPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">User: <span className="font-mono">{id}</span></h1>
+      <PageHeader
+        eyebrow="Kratos Identity"
+        title={<span className="break-all font-mono text-2xl">{id}</span>}
+        description="Inspect identity metadata, traits, and associated sessions."
+        className="mb-0"
+      />
 
       <Card>
         <CardHeader><CardTitle>Identity</CardTitle></CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <div><span className="font-medium">Schema: </span>{identity.schema_id}</div>
-          <div><span className="font-medium">State: </span><Badge>{identity.state}</Badge></div>
-          <div><span className="font-medium">Created: </span>{fmtDate(identity.created_at)}</div>
+        <CardContent className="space-y-4 text-sm">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+              <p className="text-xs text-muted-foreground">Schema</p>
+              <p className="mt-1 font-medium">{identity.schema_id}</p>
+            </div>
+            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+              <p className="text-xs text-muted-foreground">State</p>
+              <Badge className="mt-1">{identity.state}</Badge>
+            </div>
+            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+              <p className="text-xs text-muted-foreground">Created</p>
+              <p className="mt-1 font-medium">{fmtDate(identity.created_at)}</p>
+            </div>
+          </div>
           <div>
             <span className="font-medium">Traits:</span>
-            <pre className="mt-1 bg-muted p-2 rounded text-xs overflow-auto">
+            <pre className="mt-2 overflow-auto rounded-xl border border-border/50 bg-muted/35 p-3 text-xs">
               {JSON.stringify(identity.traits, null, 2)}
             </pre>
           </div>

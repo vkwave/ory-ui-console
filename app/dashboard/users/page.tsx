@@ -1,6 +1,7 @@
 import { kratos, KratosIdentity } from "@/lib/ory/kratos";
 import { DataTable, Column } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/page-header";
 import Link from "next/link";
 import { fmtDate } from "@/lib/utils";
 import { DeleteIdentityButton } from "./delete-button";
@@ -21,7 +22,7 @@ export default async function UsersPage() {
       key: "id",
       header: "ID",
       cell: (row) => (
-        <Link href={`/dashboard/users/${row.id}`} className="font-mono text-xs text-blue-600 hover:underline">
+        <Link href={`/dashboard/users/${row.id}`} className="soft-link font-mono text-xs">
           {row.id.slice(0, 8)}…
         </Link>
       ),
@@ -54,8 +55,12 @@ export default async function UsersPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Users</h1>
-      {error && <p className="text-destructive mb-4">{error}</p>}
+      <PageHeader
+        eyebrow="Kratos"
+        title="Users"
+        description="Browse identities, inspect traits, and manage attached sessions."
+      />
+      {error && <p className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
       <DataTable columns={columns} data={identities} emptyMessage="No identities found." />
     </div>
   );

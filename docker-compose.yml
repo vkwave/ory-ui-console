@@ -12,8 +12,8 @@ services:
       - KETO_WRITE_URL=http://keto:4467
       - SESSION_SECRET=${OC_SESSION_SECRET:-ory-console-secret-32-chars-minimum!!}
       - SESSION_COOKIE_NAME=ory_console_session
-      - ADMIN_EMAIL=${OC_ADMIN_EMAIL:-dkhozaie@gmail.com}
-      - ADMIN_PASSWORD=${OC_ADMIN_PASSWORD:-Votz2020??}
+      - ADMIN_EMAIL=${OC_ADMIN_EMAIL:-admin@example.com}
+      - ADMIN_PASSWORD=${OC_ADMIN_PASSWORD:-change-this-password}
     networks:
       - ory
     restart: unless-stopped

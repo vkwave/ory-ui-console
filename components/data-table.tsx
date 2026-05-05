@@ -1,6 +1,7 @@
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Inbox } from "lucide-react";
 
 export interface Column<T> {
   key: string;
@@ -22,31 +23,38 @@ export function DataTable<T>({
   keyExtractor,
 }: DataTableProps<T>) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          {columns.map((col) => (
-            <TableHead key={col.key}>{col.header}</TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.length === 0 ? (
+    <div className="glass-panel overflow-hidden rounded-2xl">
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell colSpan={columns.length} className="text-center text-muted-foreground py-8">
-              {emptyMessage}
-            </TableCell>
+            {columns.map((col) => (
+              <TableHead key={col.key}>{col.header}</TableHead>
+            ))}
           </TableRow>
-        ) : (
-          data.map((row, i) => (
-            <TableRow key={keyExtractor ? keyExtractor(row, i) : String(i)}>
-              {columns.map((col) => (
-                <TableCell key={col.key}>{col.cell(row)}</TableCell>
-              ))}
+        </TableHeader>
+        <TableBody>
+          {data.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={columns.length} className="py-12">
+                <div className="flex flex-col items-center justify-center gap-3 text-center text-muted-foreground">
+                  <span className="rounded-2xl border border-border/60 bg-muted/30 p-3">
+                    <Inbox className="size-5" />
+                  </span>
+                  <span>{emptyMessage}</span>
+                </div>
+              </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            data.map((row, i) => (
+              <TableRow key={keyExtractor ? keyExtractor(row, i) : String(i)}>
+                {columns.map((col) => (
+                  <TableCell key={col.key}>{col.cell(row)}</TableCell>
+                ))}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

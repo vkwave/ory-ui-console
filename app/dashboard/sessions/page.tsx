@@ -1,6 +1,7 @@
 import { kratos, KratosSession } from "@/lib/ory/kratos";
 import { DataTable, Column } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/page-header";
 import { fmtDate } from "@/lib/utils";
 import Link from "next/link";
 import { RevokeSessionButton } from "@/app/dashboard/users/[id]/revoke-session-button";
@@ -26,7 +27,7 @@ export default async function SessionsPage() {
       key: "subject",
       header: "User",
       cell: (s) => (
-        <Link href={`/dashboard/users/${s.identity.id}`} className="text-blue-600 hover:underline text-sm">
+        <Link href={`/dashboard/users/${s.identity.id}`} className="soft-link text-sm">
           {String((s.identity.traits as { email?: string }).email ?? s.identity.id.slice(0, 8))}
         </Link>
       ),
@@ -55,8 +56,12 @@ export default async function SessionsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Sessions</h1>
-      {error && <p className="text-destructive mb-4">{error}</p>}
+      <PageHeader
+        eyebrow="Kratos"
+        title="Sessions"
+        description="Review active and inactive identity sessions and revoke access when needed."
+      />
+      {error && <p className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
       <DataTable
         columns={columns}
         data={sessions}

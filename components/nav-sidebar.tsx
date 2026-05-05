@@ -4,24 +4,54 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  Users, Shield, Database, Mail, Key, Lock,
-  Network, Settings, LayoutDashboard, LogOut
+  Users,
+  Shield,
+  Database,
+  Mail,
+  Key,
+  Lock,
+  Network,
+  Settings,
+  LayoutDashboard,
+  LogOut,
+  Boxes,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import OryLogo from "@/public/icon.svg";
+import Image from "next/image";
 
 const NAV = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/users", label: "Users", icon: Users },
-  { href: "/dashboard/sessions", label: "Sessions", icon: Shield },
-  { href: "/dashboard/schemas", label: "Schemas", icon: Database },
-  { href: "/dashboard/couriers", label: "Couriers", icon: Mail },
-  { href: "/dashboard/oauth-clients", label: "OAuth2 Clients", icon: Key },
-  { href: "/dashboard/consents", label: "Consents", icon: Settings },
-  { href: "/dashboard/jwks", label: "JWK Sets", icon: Lock },
-  { href: "/dashboard/relations", label: "Relations", icon: Network },
-  { href: "/dashboard/permissions", label: "Permissions", icon: Shield },
+  {
+    label: "Console",
+    items: [{ href: "/dashboard", label: "Overview", icon: LayoutDashboard }],
+  },
+  {
+    label: "Kratos",
+    items: [
+      { href: "/dashboard/users", label: "Users", icon: Users },
+      { href: "/dashboard/sessions", label: "Sessions", icon: Shield },
+      { href: "/dashboard/schemas", label: "Schemas", icon: Database },
+      { href: "/dashboard/couriers", label: "Couriers", icon: Mail },
+    ],
+  },
+  {
+    label: "Hydra",
+    items: [
+      { href: "/dashboard/oauth-clients", label: "OAuth2 Clients", icon: Key },
+      { href: "/dashboard/consents", label: "Consents", icon: Settings },
+      { href: "/dashboard/jwks", label: "JWK Sets", icon: Lock },
+    ],
+  },
+  {
+    label: "Keto",
+    items: [
+      { href: "/dashboard/relations", label: "Relations", icon: Network },
+      { href: "/dashboard/permissions", label: "Permissions", icon: Shield },
+    ],
+  },
 ];
 
-export function NavSidebar() {
+export function NavSidebar({ className }: { className?: string }) {
   const pathname = usePathname();
 
   async function logout() {
@@ -33,35 +63,69 @@ export function NavSidebar() {
   }
 
   return (
-    <nav className="flex flex-col h-full w-56 border-r bg-card px-3 py-4 gap-1">
-      <p className="px-3 mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-        Ory Console
-      </p>
-      {NAV.map(({ href, label, icon: Icon }) => (
-        <Link
-          key={href}
-          href={href}
-          aria-current={pathname === href ? "page" : undefined}
-          className={cn(
-            "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-            pathname === href
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-          )}
-        >
-          <Icon className="h-4 w-4" />
-          {label}
-        </Link>
-      ))}
-      <div className="mt-auto">
-        <button
-          onClick={logout}
-          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground w-full"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign out
-        </button>
+    <nav
+      className={cn(
+        "glass-panel flex h-full  w-72 flex-col gap-5 border-white dark:border-neutral-400 px-4 py-5 lg:rounded-[2rem]",
+        className,
+      )}
+    >
+      <Link
+        href="/dashboard"
+        className="flex items-center gap-3 rounded-2xl px-2"
+      >
+        <span className="flex size-10 items-center justify-center rounded-2xl  text-primary-foreground shadow-sm">
+          {/* <Boxes className="size-5" /> */}
+          <Image src={OryLogo} alt="ory-logo" className="size-10" />
+        </span>
+        <span>
+          <span className="block text-sm font-semibold tracking-tight">
+            Ory Console
+          </span>
+          <span className="text-xs text-muted-foreground">
+            Identity, OAuth2, AuthZ
+          </span>
+        </span>
+      </Link>
+
+      <div className="flex flex-1 flex-col gap-5 overflow-y-auto pr-1">
+        {NAV.map((group) => (
+          <div key={group.label} className="space-y-1.5">
+            <p className="px-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              {group.label}
+            </p>
+            {group.items.map(({ href, label, icon: Icon }) => {
+              const active =
+                pathname === href ||
+                (href !== "/dashboard" && pathname.startsWith(`${href}/`));
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium outline-none transition-all focus-visible:ring-3 focus-visible:ring-ring/30",
+                    active
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted/55 hover:text-foreground",
+                  )}
+                >
+                  <Icon className="size-4" />
+                  <span>{label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </div>
+
+      <Button
+        onClick={logout}
+        variant="ghost"
+        className="h-10 justify-start gap-3 rounded-xl px-3 text-muted-foreground hover:bg-muted/55 hover:text-foreground"
+      >
+        <LogOut className="size-4" />
+        Sign out
+      </Button>
     </nav>
   );
 }

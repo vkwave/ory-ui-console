@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/page-header";
 
 export default function PermissionsPage() {
   const [form, setForm] = useState({
@@ -46,15 +47,20 @@ export default function PermissionsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Permission Check</h1>
+      <PageHeader
+        eyebrow="Keto"
+        title="Permission Check"
+        description="Ask Keto whether a subject has a relation on a protected object."
+        className="mb-0"
+      />
 
-      <Card className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30">
+      <Card>
         <CardHeader><CardTitle className="text-base">How Keto Permissions Work</CardTitle></CardHeader>
         <CardContent className="text-sm space-y-3 text-muted-foreground">
           <p>
             Ory Keto implements the <strong>Zanzibar</strong> model: every permission is a relation tuple{" "}
             <code className="font-mono bg-muted px-1 rounded">(namespace, object, relation, subject)</code>.
-            A permission check asks: <em>"Does subject X have relation Y on object Z in namespace N?"</em>
+            A permission check asks: <em>&quot;Does subject X have relation Y on object Z in namespace N?&quot;</em>
           </p>
           <div>
             <p className="font-medium text-foreground mb-1">Example tuples (created in Relations):</p>
@@ -79,11 +85,12 @@ export default function PermissionsPage() {
       <Card>
         <CardHeader><CardTitle>Check Permission</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             {fields.map(({ key, label, placeholder }) => (
-              <div key={key} className="space-y-1">
-                <Label>{label}</Label>
+              <div key={key} className="space-y-1.5">
+                <Label htmlFor={`permission-${key}`}>{label}</Label>
                 <Input
+                  id={`permission-${key}`}
                   value={form[key]}
                   onChange={(e) => setForm({ ...form, [key]: e.target.value })}
                   placeholder={placeholder}
@@ -93,11 +100,11 @@ export default function PermissionsPage() {
             ))}
           </div>
           <Button onClick={check} disabled={loading}>
-            {loading ? "Checking…" : "Check"}
+            {loading ? "Checking..." : "Check"}
           </Button>
-          {error && <p className="text-destructive text-sm">{error}</p>}
+          {error && <p className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
           {result !== null && (
-            <div className="flex items-center gap-2 mt-2">
+            <div className="mt-2 flex items-center gap-2 rounded-xl border border-border/50 bg-muted/20 p-3">
               <span className="font-medium">Result:</span>
               <Badge variant={result ? "default" : "destructive"}>
                 {result ? "ALLOWED" : "DENIED"}
