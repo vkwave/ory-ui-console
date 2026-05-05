@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DataTable, Column } from "@/components/data-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import type { RelationTuple } from "@/lib/ory/keto";
 
 const EMPTY_TUPLE: RelationTuple = {
@@ -126,28 +127,33 @@ export default function RelationsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Keto Relations</h1>
+      <PageHeader
+        eyebrow="Keto"
+        title="Relations"
+        description="Search, create, and remove relation tuples that back authorization decisions."
+        className="mb-0"
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle>Filter</CardTitle>
+          <CardTitle>Filter Tuples</CardTitle>
         </CardHeader>
-        <CardContent className="flex gap-2 flex-wrap items-end">
+        <CardContent className="grid gap-3 md:grid-cols-[repeat(3,minmax(0,1fr))_auto] md:items-end">
           {filterFields.map(({ key, label, placeholder }) => (
-            <div key={key} className="space-y-1">
-              <Label>{label}</Label>
+            <div key={key} className="space-y-1.5">
+              <Label htmlFor={`filter-${key}`}>{label}</Label>
               <Input
+                id={`filter-${key}`}
                 value={filter[key]}
                 onChange={(e) =>
                   setFilter({ ...filter, [key]: e.target.value })
                 }
                 placeholder={placeholder}
-                className="w-36"
               />
             </div>
           ))}
-          <Button onClick={search} disabled={loading}>
-            {loading ? "…" : "Search"}
+          <Button onClick={search} disabled={loading} className="h-9">
+            {loading ? "Searching..." : "Search"}
           </Button>
         </CardContent>
       </Card>
@@ -156,24 +162,24 @@ export default function RelationsPage() {
         <CardHeader>
           <CardTitle>Add Relation</CardTitle>
         </CardHeader>
-        <CardContent className="flex gap-2 flex-wrap items-end">
+        <CardContent className="grid gap-3 md:grid-cols-[repeat(4,minmax(0,1fr))_auto] md:items-end">
           {tupleFields.map(({ key, label }) => (
-            <div key={key} className="space-y-1">
-              <Label>{label}</Label>
+            <div key={key} className="space-y-1.5">
+              <Label htmlFor={`tuple-${key}`}>{label}</Label>
               <Input
+                id={`tuple-${key}`}
                 value={String(newTuple[key] ?? "")}
                 onChange={(e) =>
                   setNewTuple({ ...newTuple, [key]: e.target.value })
                 }
-                className="w-36"
               />
             </div>
           ))}
-          <Button onClick={createRelation}>Add</Button>
+          <Button onClick={createRelation} className="h-9">Add</Button>
         </CardContent>
       </Card>
 
-      {error && <p className="text-destructive text-sm">{error}</p>}
+      {error && <p className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
       <DataTable
         columns={columns}
         data={tuples}

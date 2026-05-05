@@ -2,6 +2,7 @@ import { hydra } from "@/lib/ory/hydra";
 import { JsonViewer } from "@/components/json-viewer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -22,13 +23,20 @@ export default async function JWKsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">JWK Sets</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          JSON Web Key Sets used by Hydra to sign tokens. <code className="font-mono bg-muted px-1 rounded">hydra.openid.id-token</code> signs OIDC ID tokens;{" "}
-          <code className="font-mono bg-muted px-1 rounded">hydra.jwt.access-token</code> signs JWT access tokens (only present when Hydra is configured to issue JWTs).
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Hydra"
+        title="JWK Sets"
+        description={
+          <>
+            JSON Web Key Sets used by Hydra to sign tokens.{" "}
+            <code className="rounded bg-muted px-1 font-mono">hydra.openid.id-token</code>{" "}
+            signs OIDC ID tokens and{" "}
+            <code className="rounded bg-muted px-1 font-mono">hydra.jwt.access-token</code>{" "}
+            signs JWT access tokens when enabled.
+          </>
+        }
+        className="mb-0"
+      />
 
       {sets.length === 0 && (
         <Card>

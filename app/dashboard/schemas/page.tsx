@@ -1,6 +1,7 @@
 import { kratos, KratosSchema } from "@/lib/ory/kratos";
 import { DataTable, Column } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -29,8 +30,12 @@ export default async function SchemasPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Identity Schemas</h1>
-      {error && <p className="text-destructive mb-4">{error}</p>}
+      <PageHeader
+        eyebrow="Kratos"
+        title="Identity Schemas"
+        description="Open schema definitions used to validate identity traits and profile data."
+      />
+      {error && <p className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
       <DataTable
         columns={columns}
         data={schemas}

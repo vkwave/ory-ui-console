@@ -1,6 +1,7 @@
 import { hydra, HydraClient } from "@/lib/ory/hydra";
 import { DataTable, Column } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/page-header";
 import Link from "next/link";
 import { fmtDate, truncate } from "@/lib/utils";
 import { DeleteClientButton } from "./delete-client-button";
@@ -21,7 +22,7 @@ export default async function OAuthClientsPage() {
       key: "id",
       header: "Client ID",
       cell: (c) => (
-        <Link href={`/dashboard/oauth-clients/${encodeURIComponent(c.client_id)}`} className="font-mono text-xs text-blue-600 hover:underline">
+        <Link href={`/dashboard/oauth-clients/${encodeURIComponent(c.client_id)}`} className="soft-link font-mono text-xs">
           {c.client_id}
         </Link>
       ),
@@ -47,8 +48,12 @@ export default async function OAuthClientsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">OAuth2 Clients</h1>
-      {error && <p className="text-destructive mb-4">{error}</p>}
+      <PageHeader
+        eyebrow="Hydra"
+        title="OAuth2 Clients"
+        description="Inspect registered clients, scopes, grant types, and client metadata."
+      />
+      {error && <p className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
       <DataTable
         columns={columns}
         data={clients}

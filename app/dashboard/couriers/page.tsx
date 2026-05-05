@@ -1,6 +1,7 @@
 import { kratos, CourierMessage } from "@/lib/ory/kratos";
 import { DataTable, Column } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/page-header";
 import { fmtDate } from "@/lib/utils";
 import { RetryMessageButton } from "./retry-message-button";
 
@@ -38,12 +39,12 @@ export default async function CouriersPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Courier Messages</h1>
-      <p className="text-muted-foreground text-sm mb-6">
-        Read-only log of outgoing emails sent by Kratos (verification, recovery, OTP). Courier
-        configuration (SMTP server, templates) is managed in the Kratos YAML config file — not via API.
-      </p>
-      {error && <p className="text-destructive mb-4">{error}</p>}
+      <PageHeader
+        eyebrow="Kratos"
+        title="Courier Messages"
+        description="Read-only log of outgoing Kratos emails. SMTP server and templates remain managed in Kratos configuration."
+      />
+      {error && <p className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
       <DataTable
         columns={columns}
         data={messages}
