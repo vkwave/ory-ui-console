@@ -1,11 +1,5 @@
 # Ory Console
 
-<!--
-  Screenshot placeholder:
-  Replace the image below with a real dashboard screenshot after publishing.
-  Recommended path: public/ory-console-dashboard.png
--->
-
 ![Ory Console dashboard screenshot](public/ory-console-dashboard.png)
 
 **Ory Console** is an open-source admin dashboard for managing an Ory stack from one modern interface. It provides a clean web UI for **Ory Kratos** identity management, **Ory Hydra** OAuth2 administration, and **Ory Keto** authorization checks and relation tuples.
@@ -96,16 +90,16 @@ ADMIN_PASSWORD=change-this-password
 
 ### Variable Reference
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| `KRATOS_ADMIN_URL` | Yes | URL for the Ory Kratos Admin API. |
-| `HYDRA_ADMIN_URL` | Yes | URL for the Ory Hydra Admin API. |
-| `KETO_READ_URL` | Yes | URL for the Ory Keto Read API. |
-| `KETO_WRITE_URL` | Yes | URL for the Ory Keto Write API. |
-| `SESSION_SECRET` | Yes | Secret used by `iron-session`. Use a strong random value with at least 32 characters. |
-| `SESSION_COOKIE_NAME` | No | Cookie name for the dashboard session. |
-| `ADMIN_EMAIL` | Yes | Email used to sign in to Ory Console. |
-| `ADMIN_PASSWORD` | Yes | Password used to sign in to Ory Console. |
+| Variable              | Required | Description                                                                           |
+| --------------------- | -------- | ------------------------------------------------------------------------------------- |
+| `KRATOS_ADMIN_URL`    | Yes      | URL for the Ory Kratos Admin API.                                                     |
+| `HYDRA_ADMIN_URL`     | Yes      | URL for the Ory Hydra Admin API.                                                      |
+| `KETO_READ_URL`       | Yes      | URL for the Ory Keto Read API.                                                        |
+| `KETO_WRITE_URL`      | Yes      | URL for the Ory Keto Write API.                                                       |
+| `SESSION_SECRET`      | Yes      | Secret used by `iron-session`. Use a strong random value with at least 32 characters. |
+| `SESSION_COOKIE_NAME` | No       | Cookie name for the dashboard session.                                                |
+| `ADMIN_EMAIL`         | Yes      | Email used to sign in to Ory Console.                                                 |
+| `ADMIN_PASSWORD`      | Yes      | Password used to sign in to Ory Console.                                              |
 
 ## Run Locally
 
