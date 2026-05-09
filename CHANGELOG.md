@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Keto Write API Endpoints**: Corrected endpoint paths for Ory Keto v0.10+ compatibility (resolves 404 errors on role assignment)
 
-## [0.1.0] - Initial Release
+## [1.0.1] - Initial Release
 
 ### Added
 
