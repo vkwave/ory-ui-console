@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   LogOut,
   Boxes,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import OryLogo from "@/public/icon.svg";
@@ -45,6 +46,7 @@ const NAV = [
   {
     label: "Keto",
     items: [
+      { href: "/dashboard/roles", label: "Roles", icon: UserCheck },
       { href: "/dashboard/relations", label: "Relations", icon: Network },
       { href: "/dashboard/permissions", label: "Permissions", icon: Shield },
     ],

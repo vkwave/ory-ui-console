@@ -41,7 +41,7 @@ export const keto = {
   },
 
   createRelation: (tuple: RelationTuple): Promise<null> =>
-    ketoFetch(WRITE_BASE, "/relation-tuples", {
+    ketoFetch(WRITE_BASE, "/admin/relation-tuples", {
       method: "PUT",
       body: JSON.stringify(tuple),
     }),
@@ -53,7 +53,7 @@ export const keto = {
       relation: tuple.relation,
     });
     if (tuple.subject_id) params.set("subject_id", tuple.subject_id);
-    return ketoFetch(WRITE_BASE, `/relation-tuples?${params}`, { method: "DELETE" });
+    return ketoFetch(WRITE_BASE, `/admin/relation-tuples?${params}`, { method: "DELETE" });
   },
 
   checkPermission: (

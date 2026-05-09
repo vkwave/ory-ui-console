@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { fmtDate } from "@/lib/utils";
 import { RevokeSessionButton } from "./revoke-session-button";
 import { RevokeAllSessionsButton } from "./revoke-all-sessions-button";
+import { UserRoles } from "./user-roles";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,8 @@ export default async function UserDetailPage({
           </div>
         </CardContent>
       </Card>
+
+      <UserRoles userId={id} />
 
       <Card>
         <CardHeader>
