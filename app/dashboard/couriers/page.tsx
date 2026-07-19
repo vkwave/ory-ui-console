@@ -1,56 +1,78 @@
-import { kratos, CourierMessage } from "@/lib/ory/kratos";
-import { DataTable, Column } from "@/components/data-table";
-import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/page-header";
-import { fmtDate } from "@/lib/utils";
-import { RetryMessageButton } from "./retry-message-button";
+import { CircleAlertIcon } from "lucide-react"
 
-export const dynamic = "force-dynamic";
+import { DataTable, type Column } from "@/components/data-table"
+import { PageHeader } from "@/components/page-header"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { kratos, type CourierMessage } from "@/lib/ory/kratos"
+import { fmtDate } from "@/lib/utils"
+
+export const dynamic = "force-dynamic"
 
 export default async function CouriersPage() {
-  let messages: CourierMessage[] = [];
-  let error: string | null = null;
-  try {
-    messages = await kratos.listMessages(1, 100);
-  } catch (e) {
-    error = String(e);
-  }
-
-  const statusVariant = (s: string): "default" | "secondary" | "destructive" =>
-    s === "sent" ? "default" : s === "queued" ? "secondary" : "destructive";
+  const result = await kratos.listMessages(1, 100).then(
+    (messages) => ({ messages, error: null as string | null }),
+    () => ({ messages: [] as CourierMessage[], error: "Courier messages are unavailable." }),
+  )
+  const statusVariant = (
+    status: string,
+  ): "default" | "secondary" | "destructive" =>
+    status === "sent" ? "default" : status === "queued" ? "secondary" : "destructive"
 
   const columns: Column<CourierMessage>[] = [
-    { key: "id", header: "ID", cell: (m) => <span className="font-mono text-xs">{m.id.slice(0, 8)}…</span> },
-    { key: "recipient", header: "Recipient", cell: (m) => m.recipient },
-    { key: "template", header: "Template", cell: (m) => m.template_type },
+    {
+      key: "id",
+      header: "ID",
+      cell: (message) => (
+        <span className="font-mono text-xs">{message.id.slice(0, 8)}…</span>
+      ),
+    },
+    { key: "recipient", header: "Recipient", cell: (message) => message.recipient },
+    {
+      key: "template",
+      header: "Template",
+      cell: (message) => message.template_type,
+    },
     {
       key: "status",
       header: "Status",
-      cell: (m) => <Badge variant={statusVariant(m.status)}>{m.status}</Badge>,
+      cell: (message) => (
+        <Badge variant={statusVariant(message.status)}>{message.status}</Badge>
+      ),
     },
-    { key: "sends", header: "Sends", cell: (m) => m.send_count },
-    { key: "created", header: "Created", cell: (m) => fmtDate(m.created_at) },
+    { key: "sends", header: "Sends", cell: (message) => message.send_count },
     {
-      key: "retry",
-      header: "",
-      cell: (m) => <RetryMessageButton messageId={m.id} isSent={m.status === "sent"} />,
+      key: "created",
+      header: "Created",
+      cell: (message) => fmtDate(message.created_at),
     },
-  ];
+  ]
 
   return (
-    <div>
+    <div className="flex flex-col gap-6">
       <PageHeader
         eyebrow="Kratos"
-        title="Courier Messages"
-        description="Read-only log of outgoing Kratos emails. SMTP server and templates remain managed in Kratos configuration."
+        title="Courier messages"
+        description="Read-only delivery metadata. Message contents and recipient details are never exposed."
+        className="mb-0"
       />
-      {error && <p className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+      {result.error && (
+        <Alert variant="destructive">
+          <CircleAlertIcon />
+          <AlertTitle>Courier messages could not be loaded</AlertTitle>
+          <AlertDescription>{result.error}</AlertDescription>
+        </Alert>
+      )}
       <DataTable
         columns={columns}
-        data={messages}
-        keyExtractor={(m) => m.id}
-        emptyMessage="No messages found."
+        data={result.messages}
+        keyExtractor={(message) => message.id}
+        emptyMessage="No courier messages found."
       />
     </div>
-  );
+  )
 }

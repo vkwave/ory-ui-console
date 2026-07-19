@@ -1,73 +1,117 @@
-import { kratos, KratosSession } from "@/lib/ory/kratos";
-import { DataTable, Column } from "@/components/data-table";
-import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/page-header";
-import { fmtDate } from "@/lib/utils";
-import Link from "next/link";
-import { RevokeSessionButton } from "@/app/dashboard/users/[id]/revoke-session-button";
+import Link from "next/link"
 
-export const dynamic = "force-dynamic";
+import { CircleAlertIcon, ShieldAlertIcon } from "lucide-react"
+
+import { RevokeSessionButton } from "@/app/dashboard/users/[id]/identity-actions"
+import { DataTable, type Column } from "@/components/data-table"
+import { PageHeader } from "@/components/page-header"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { checkOryHealth, type OryHealth } from "@/lib/ory/health"
+import { kratos, type KratosSession } from "@/lib/ory/kratos"
+import { fmtDate } from "@/lib/utils"
+
+export const dynamic = "force-dynamic"
+
+const unavailable: OryHealth = {
+  hydra: false,
+  kratos: false,
+  degraded: true,
+  readOnly: true,
+}
 
 export default async function SessionsPage() {
-  let sessions: KratosSession[] = [];
-  let error: string | null = null;
-  try {
-    sessions = await kratos.listSessions(1, 200);
-  } catch (e) {
-    error = String(e);
-  }
-
+  const [healthResult, sessionsResult] = await Promise.allSettled([
+    checkOryHealth(),
+    kratos.listSessions(1, 200),
+  ])
+  const health =
+    healthResult.status === "fulfilled" ? healthResult.value : unavailable
+  const sessions =
+    sessionsResult.status === "fulfilled" ? sessionsResult.value : []
   const columns: Column<KratosSession>[] = [
     {
       key: "id",
       header: "Session ID",
-      cell: (s) => <span className="font-mono text-xs">{s.id.slice(0, 8)}…</span>,
+      cell: (session) => (
+        <span className="font-mono text-xs">{session.id.slice(0, 8)}…</span>
+      ),
     },
     {
       key: "subject",
       header: "User",
-      cell: (s) => (
-        <Link href={`/dashboard/users/${s.identity.id}`} className="soft-link text-sm">
-          {String((s.identity.traits as { email?: string }).email ?? s.identity.id.slice(0, 8))}
+      cell: (session) => (
+        <Link
+          href={`/dashboard/users/${session.identity.id}`}
+          className="soft-link text-sm"
+        >
+          {String(
+            (session.identity.traits as { email?: string }).email ??
+              session.identity.id.slice(0, 8),
+          )}
         </Link>
       ),
     },
     {
       key: "active",
       header: "Active",
-      cell: (s) => <Badge variant={s.active ? "default" : "secondary"}>{s.active ? "yes" : "no"}</Badge>,
+      cell: (session) => (
+        <Badge variant={session.active ? "default" : "secondary"}>
+          {session.active ? "yes" : "no"}
+        </Badge>
+      ),
     },
     {
       key: "authenticated_at",
       header: "Authenticated",
-      cell: (s) => fmtDate(s.authenticated_at),
+      cell: (session) => fmtDate(session.authenticated_at),
     },
     {
       key: "expires_at",
       header: "Expires",
-      cell: (s) => fmtDate(s.expires_at),
+      cell: (session) => fmtDate(session.expires_at),
     },
     {
       key: "revoke",
       header: "",
-      cell: (s) => <RevokeSessionButton sessionId={s.id} />,
+      cell: (session) => (
+        <RevokeSessionButton sessionID={session.id} readOnly={health.readOnly} />
+      ),
     },
-  ];
+  ]
 
   return (
-    <div>
+    <div className="flex flex-col gap-6">
       <PageHeader
         eyebrow="Kratos"
         title="Sessions"
         description="Review active and inactive identity sessions and revoke access when needed."
+        className="mb-0"
       />
-      {error && <p className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+      {health.readOnly && (
+        <Alert variant="destructive">
+          <ShieldAlertIcon />
+          <AlertTitle>Administrator APIs are degraded</AlertTitle>
+          <AlertDescription>Session controls are read-only.</AlertDescription>
+        </Alert>
+      )}
+      {sessionsResult.status === "rejected" && (
+        <Alert variant="destructive">
+          <CircleAlertIcon />
+          <AlertTitle>Sessions could not be loaded</AlertTitle>
+          <AlertDescription>The Kratos administrator API is unavailable.</AlertDescription>
+        </Alert>
+      )}
       <DataTable
         columns={columns}
         data={sessions}
-        keyExtractor={(s) => s.id}
-        emptyMessage="No active sessions."
+        keyExtractor={(session) => session.id}
+        emptyMessage="No sessions found."
       />
     </div>
-  );
+  )
 }

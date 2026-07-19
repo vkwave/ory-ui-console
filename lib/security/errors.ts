@@ -4,6 +4,7 @@ import { ZodError } from "zod"
 
 import { AdapterClientError } from "@/lib/adapter/client"
 import { ClientLifecycleError } from "@/lib/hydra/lifecycle"
+import { IdentityOperationError } from "@/lib/kratos/identity-operations"
 import { OryAdminError } from "@/lib/ory/result"
 
 export const safeErrorResponse = (error: unknown): Response => {
@@ -19,6 +20,7 @@ export const safeErrorResponse = (error: unknown): Response => {
   }
   if (
     error instanceof ClientLifecycleError ||
+    error instanceof IdentityOperationError ||
     error instanceof AdapterClientError
   ) {
     return Response.json({ error: error.code }, { status: error.status })

@@ -1,7 +1,7 @@
 "use client"
 
 interface MutationOptions {
-  method: "POST" | "PUT" | "DELETE"
+  method: "POST" | "PUT" | "PATCH" | "DELETE"
   body: unknown
 }
 
@@ -23,7 +23,7 @@ const responseJSON = async (response: Response): Promise<unknown> => {
   }
 }
 
-export const mutateOAuthClient = async <T = unknown>(
+export const mutateConsole = async <T = unknown>(
   path: string,
   options: MutationOptions,
   dependencies: MutationDependencies = {},
@@ -56,3 +56,5 @@ export const mutateOAuthClient = async <T = unknown>(
   }
   return result as T
 }
+
+export const mutateOAuthClient = mutateConsole

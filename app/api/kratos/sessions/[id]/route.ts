@@ -1,19 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
-import { kratos } from "@/lib/ory/kratos";
-import { getSession } from "@/lib/session";
+import { z } from "zod"
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getSession();
-  if (!session.admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+import { kratos } from "@/lib/ory/kratos"
+import { safeErrorResponse } from "@/lib/security/errors"
+import { runAuditedOperation } from "@/lib/security/operation"
+import { requireMutation } from "@/lib/security/request"
+
+interface RouteContext {
+  params: Promise<{ id: string }>
+}
+
+export const DELETE = async (
+  request: Request,
+  context: RouteContext,
+): Promise<Response> => {
   try {
-    const { id } = await params;
-    await kratos.revokeSession(id);
-    return NextResponse.json({ ok: true });
+    const { id } = await context.params
+    const mutation = await requireMutation(request, z.object({}).strict())
+    await runAuditedOperation({
+      request,
+      ...mutation,
+      action: "session.revoke",
+      targetType: "session",
+      targetID: id,
+      before: { session_id: id },
+      operation: () => kratos.revokeSession(id),
+    })
+    return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return safeErrorResponse(error)
   }
 }

@@ -4,7 +4,6 @@ import type {
   JsonPatch,
   JsonWebKeySet,
   OAuth2Client,
-  OAuth2ConsentSession,
 } from "@ory/client"
 
 import { getOryClients, type OryClients } from "@/lib/ory/clients"
@@ -21,7 +20,14 @@ export type HydraClient = OAuth2Client & {
   updated_at: string
 }
 
-export type ConsentSession = OAuth2ConsentSession
+export interface ConsentSession {
+  consent_request_id?: string
+  consent_request?: {
+    subject?: string
+    client?: HydraClient
+  }
+  grant_scope?: string[]
+}
 export type JWKSet = JsonWebKeySet
 
 const clientView = (
@@ -43,6 +49,26 @@ const clientView = (
     updated_at: client.updated_at ?? "",
   }
 }
+
+const consentView = (session: {
+  consent_request_id?: string
+  consent_request?: {
+    subject?: string
+    client?: OAuth2Client
+  }
+  grant_scope?: string[]
+}): ConsentSession => ({
+  consent_request_id: session.consent_request_id,
+  consent_request: session.consent_request
+    ? {
+        subject: session.consent_request.subject,
+        client: session.consent_request.client
+          ? clientView(session.consent_request.client)
+          : undefined,
+      }
+    : undefined,
+  grant_scope: session.grant_scope ?? [],
+})
 
 export const createHydraService = (
   clients: () => Pick<OryClients, "hydraAdmin" | "hydraJWK">,
@@ -106,7 +132,7 @@ export const createHydraService = (
     const response = await callOry(() =>
       clients().hydraAdmin.listOAuth2ConsentSessions({ subject }),
     )
-    return response.data
+    return response.data.map(consentView)
   },
 
   revokeConsentSessions: async (

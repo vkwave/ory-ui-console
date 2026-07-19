@@ -1,97 +1,199 @@
-import { kratos, KratosSession } from "@/lib/ory/kratos";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DataTable, Column } from "@/components/data-table";
-import { PageHeader } from "@/components/page-header";
-import { fmtDate } from "@/lib/utils";
-import { RevokeSessionButton } from "./revoke-session-button";
-import { RevokeAllSessionsButton } from "./revoke-all-sessions-button";
-import { UserRoles } from "./user-roles";
+import { CircleAlertIcon, ShieldAlertIcon } from "lucide-react"
 
-export const dynamic = "force-dynamic";
+import {
+  IdentityActions,
+  RevokeAllSessionsButton,
+  RevokeSessionButton,
+} from "@/app/dashboard/users/[id]/identity-actions"
+import { UserRoles } from "@/app/dashboard/users/[id]/user-roles"
+import { DataTable, type Column } from "@/components/data-table"
+import { PageHeader } from "@/components/page-header"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { rolesForIdentity } from "@/lib/kratos/identity-operations"
+import { checkOryHealth, type OryHealth } from "@/lib/ory/health"
+import {
+  kratos,
+  type KratosIdentity,
+  type KratosSession,
+} from "@/lib/ory/kratos"
+import { fmtDate } from "@/lib/utils"
+
+export const dynamic = "force-dynamic"
+
+const unavailable: OryHealth = {
+  hydra: false,
+  kratos: false,
+  degraded: true,
+  readOnly: true,
+}
 
 export default async function UserDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string }>
 }) {
-  const { id } = await params;
-  const [identity, sessions] = await Promise.all([
-    kratos.getIdentity(id),
-    kratos.getIdentitySessions(id),
-  ]);
+  const { id } = await params
+  const [healthResult, identityResult, sessionsResult] =
+    await Promise.allSettled([
+      checkOryHealth(),
+      kratos.getIdentity(id),
+      kratos.getIdentitySessions(id),
+    ])
+  const health =
+    healthResult.status === "fulfilled" ? healthResult.value : unavailable
 
-  const sessionCols: Column<KratosSession>[] = [
+  if (identityResult.status === "rejected") {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          eyebrow="Kratos identity"
+          title={<span className="break-all font-mono text-2xl">{id}</span>}
+          className="mb-0"
+        />
+        <Alert variant="destructive">
+          <CircleAlertIcon />
+          <AlertTitle>Identity could not be loaded</AlertTitle>
+          <AlertDescription>
+            The identity does not exist or Kratos is unavailable.
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
+  const identity: KratosIdentity = identityResult.value
+  const sessions: KratosSession[] =
+    sessionsResult.status === "fulfilled" ? sessionsResult.value : []
+  const sessionColumns: Column<KratosSession>[] = [
     {
       key: "id",
       header: "Session ID",
-      cell: (s) => <span className="font-mono text-xs">{s.id.slice(0, 8)}…</span>,
+      cell: (session) => (
+        <span className="font-mono text-xs">{session.id.slice(0, 8)}…</span>
+      ),
     },
     {
       key: "active",
       header: "Active",
-      cell: (s) => <Badge variant={s.active ? "default" : "secondary"}>{s.active ? "yes" : "no"}</Badge>,
+      cell: (session) => (
+        <Badge variant={session.active ? "default" : "secondary"}>
+          {session.active ? "yes" : "no"}
+        </Badge>
+      ),
     },
     {
       key: "expires",
       header: "Expires",
-      cell: (s) => fmtDate(s.expires_at),
+      cell: (session) => fmtDate(session.expires_at),
     },
     {
       key: "revoke",
       header: "",
-      cell: (s) => <RevokeSessionButton sessionId={s.id} />,
+      cell: (session) => (
+        <RevokeSessionButton sessionID={session.id} readOnly={health.readOnly} />
+      ),
     },
-  ];
+  ]
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
-        eyebrow="Kratos Identity"
+        eyebrow="Kratos identity"
         title={<span className="break-all font-mono text-2xl">{id}</span>}
-        description="Inspect identity metadata, traits, and associated sessions."
+        description="Inspect non-credential identity data and administer the closed role set and attached sessions."
         className="mb-0"
+        actions={
+          <IdentityActions
+            identityID={id}
+            state={identity.state}
+            readOnly={health.readOnly}
+          />
+        }
       />
-
+      {health.readOnly && (
+        <Alert variant="destructive">
+          <ShieldAlertIcon />
+          <AlertTitle>Administrator APIs are degraded</AlertTitle>
+          <AlertDescription>
+            This identity is read-only until Hydra and Kratos health checks
+            succeed.
+          </AlertDescription>
+        </Alert>
+      )}
+      {sessionsResult.status === "rejected" && (
+        <Alert variant="destructive">
+          <CircleAlertIcon />
+          <AlertTitle>Sessions could not be loaded</AlertTitle>
+          <AlertDescription>
+            The identity is available, but Kratos session data is unavailable.
+          </AlertDescription>
+        </Alert>
+      )}
       <Card>
-        <CardHeader><CardTitle>Identity</CardTitle></CardHeader>
-        <CardContent className="space-y-4 text-sm">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-              <p className="text-xs text-muted-foreground">Schema</p>
-              <p className="mt-1 font-medium">{identity.schema_id}</p>
+        <CardHeader>
+          <CardTitle>Identity</CardTitle>
+          <CardDescription>
+            Credentials are intentionally excluded from this administrator view.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-5 text-sm">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <p className="text-muted-foreground">Schema</p>
+              <p>{identity.schema_id}</p>
             </div>
-            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-              <p className="text-xs text-muted-foreground">State</p>
-              <Badge className="mt-1">{identity.state}</Badge>
+            <div>
+              <p className="text-muted-foreground">State</p>
+              <Badge variant={identity.state === "active" ? "default" : "secondary"}>
+                {identity.state}
+              </Badge>
             </div>
-            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-              <p className="text-xs text-muted-foreground">Created</p>
-              <p className="mt-1 font-medium">{fmtDate(identity.created_at)}</p>
+            <div>
+              <p className="text-muted-foreground">Created</p>
+              <p>{fmtDate(identity.created_at)}</p>
             </div>
           </div>
           <div>
-            <span className="font-medium">Traits:</span>
-            <pre className="mt-2 overflow-auto rounded-xl border border-border/50 bg-muted/35 p-3 text-xs">
+            <p className="font-medium">Traits</p>
+            <pre className="mt-2 max-h-80 overflow-auto rounded-lg border bg-muted/30 p-3 text-xs">
               {JSON.stringify(identity.traits, null, 2)}
             </pre>
           </div>
         </CardContent>
       </Card>
-
-      <UserRoles userId={id} />
-
+      <UserRoles
+        identityID={id}
+        initialRoles={rolesForIdentity(identity)}
+        readOnly={health.readOnly}
+      />
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Sessions ({sessions.length})</CardTitle>
-            <RevokeAllSessionsButton identityId={id} />
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <CardTitle>Sessions ({sessions.length})</CardTitle>
+              <CardDescription>
+                Disable individual sessions or revoke every session for this identity.
+              </CardDescription>
+            </div>
+            <RevokeAllSessionsButton identityID={id} readOnly={health.readOnly} />
           </div>
         </CardHeader>
         <CardContent>
-          <DataTable columns={sessionCols} data={sessions} emptyMessage="No sessions." />
+          <DataTable columns={sessionColumns} data={sessions} emptyMessage="No sessions." />
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

@@ -78,6 +78,89 @@ describe("official ORY clients", () => {
     )
   })
 
+  it("returns only curated consent fields without client secrets or context", async () => {
+    const listOAuth2ConsentSessions = vi.fn().mockResolvedValue({
+      data: [
+        {
+          consent_request_id: "consent-1",
+          consent_request: {
+            subject: "identity-1",
+            client: {
+              client_id: "client-1",
+              client_name: "Client",
+              client_secret: "must-not-leak",
+            },
+          },
+          grant_scope: ["openid", "mcp:tools"],
+          context: { email: "must-not-leak@example.test" },
+          session: { access_token: { credential: "must-not-leak" } },
+        },
+      ],
+    })
+    const hydra = createHydraService(() => ({
+      hydraAdmin: { listOAuth2ConsentSessions } as never,
+      hydraJWK: {} as never,
+    }))
+
+    const sessions = await hydra.listConsentSessions("identity-1")
+
+    expect(sessions).toEqual([
+      {
+        consent_request_id: "consent-1",
+        consent_request: {
+          subject: "identity-1",
+          client: expect.objectContaining({
+            client_id: "client-1",
+            client_name: "Client",
+          }),
+        },
+        grant_scope: ["openid", "mcp:tools"],
+      },
+    ])
+    expect(JSON.stringify(sessions)).not.toMatch(
+      /must-not-leak|client_secret|context|session|email|credential/,
+    )
+  })
+
+  it("masks courier recipients and removes message contents", async () => {
+    const listCourierMessages = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: "message-1",
+          status: "sent",
+          type: "email",
+          template_type: "verification_valid",
+          recipient: "alice@example.test",
+          created_at: "2026-07-19T00:00:00Z",
+          updated_at: "2026-07-19T00:01:00Z",
+          send_count: 1,
+          body: "verification code must-not-leak",
+          subject: "must-not-leak",
+        },
+      ],
+    })
+    const kratos = createKratosService(() => ({
+      kratosIdentities: {} as never,
+      kratosCourier: { listCourierMessages } as never,
+    }))
+
+    const messages = await kratos.listMessages()
+
+    expect(messages).toEqual([
+      {
+        id: "message-1",
+        status: "sent",
+        type: "email",
+        template_type: "verification_valid",
+        recipient: "a***@example.test",
+        created_at: "2026-07-19T00:00:00Z",
+        updated_at: "2026-07-19T00:01:00Z",
+        send_count: 1,
+      },
+    ])
+    expect(JSON.stringify(messages)).not.toMatch(/must-not-leak|body|subject/)
+  })
+
   it("normalizes SDK failures without exposing upstream bodies", () => {
     const error = normalizeOryError({
       isAxiosError: true,

@@ -1,151 +1,143 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { X } from "lucide-react";
-import Link from "next/link";
-import type { RelationTuple } from "@/lib/ory/keto";
+import { useState } from "react"
 
-export function UserRoles({ userId }: { userId: string }) {
-  const [assigned, setAssigned] = useState<string[]>([]);
-  const [available, setAvailable] = useState<string[]>([]);
-  const [selected, setSelected] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+import { CircleAlertIcon, SaveIcon } from "lucide-react"
 
-  useEffect(() => {
-    loadData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+import { mutateConsole } from "@/app/dashboard/oauth-clients/mutation"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
+import { Spinner } from "@/components/ui/spinner"
 
-  async function loadData() {
-    setLoading(true);
-    setError("");
-    try {
-      const [userRes, allRes] = await Promise.all([
-        fetch(`/api/keto/relations?${new URLSearchParams({ namespace: "roles", subject_id: userId })}`),
-        fetch(`/api/keto/relations?${new URLSearchParams({ namespace: "roles" })}`),
-      ]);
-      if (!userRes.ok) throw new Error(await userRes.text());
-      if (!allRes.ok) throw new Error(await allRes.text());
+const roles = [
+  {
+    value: "auth_admin",
+    label: "Authentication administrator",
+    description: "Full administrator access to this console.",
+  },
+  {
+    value: "security_operator",
+    label: "Security operator",
+    description: "Security operations role reserved for curated workflows.",
+  },
+] as const
 
-      const userTuples: RelationTuple[] = (await userRes.json()).relation_tuples ?? [];
-      const allTuples: RelationTuple[] = (await allRes.json()).relation_tuples ?? [];
+interface UserRolesProps {
+  identityID: string
+  initialRoles: string[]
+  readOnly: boolean
+}
 
-      const assignedRoles = userTuples.map((t) => t.object);
-      const allRoles = [...new Set(allTuples.map((t) => t.object))];
-      const unassigned = allRoles.filter((r) => !assignedRoles.includes(r));
+export function UserRoles({
+  identityID,
+  initialRoles,
+  readOnly,
+}: UserRolesProps) {
+  const [selected, setSelected] = useState(() =>
+    initialRoles.filter((role) => roles.some((item) => item.value === role)),
+  )
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-      setAssigned(assignedRoles);
-      setAvailable(unassigned);
-      setSelected(unassigned[0] ?? "");
-    } catch (e) {
-      setError(String(e));
-    }
-    setLoading(false);
+  const toggle = (role: string, checked: boolean) => {
+    setSelected((current) =>
+      checked
+        ? [...new Set([...current, role])]
+        : current.filter((item) => item !== role),
+    )
   }
 
-  async function assign() {
-    if (!selected) return;
-    setError("");
+  const save = async () => {
+    setPending(true)
+    setError(null)
     try {
-      const res = await fetch("/api/keto/relations", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ namespace: "roles", object: selected, relation: "member", subject_id: userId }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? `Failed: ${res.status}`);
-      }
-      await loadData();
-    } catch (e) {
-      setError(String(e));
-    }
-  }
-
-  async function remove(role: string) {
-    setError("");
-    try {
-      const res = await fetch("/api/keto/relations", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ namespace: "roles", object: role, relation: "member", subject_id: userId }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? `Failed: ${res.status}`);
-      }
-      await loadData();
-    } catch (e) {
-      setError(String(e));
+      await mutateConsole(
+        `/api/kratos/identities/${encodeURIComponent(identityID)}/roles`,
+        { method: "PUT", body: { roles: selected } },
+      )
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "operation_failed")
+    } finally {
+      setPending(false)
     }
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Roles</CardTitle>
+        <CardTitle>Administrator roles</CardTitle>
+        <CardDescription>
+          Roles are stored in Kratos metadata_admin. Unrelated metadata is
+          preserved on every update.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : assigned.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No roles assigned.</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {assigned.map((role) => (
-              <Badge key={role} className="gap-1.5 pr-1.5">
-                {role}
-                <button
-                  onClick={() => remove(role)}
-                  className="rounded-full transition-opacity hover:opacity-70"
-                >
-                  <X className="size-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        )}
-
-        {!loading && available.length > 0 && (
-          <div className="flex items-center gap-2">
-            <select
-              value={selected}
-              onChange={(e) => setSelected(e.target.value)}
-              className="flex h-9 w-36 rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              {available.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
-            <Button size="sm" onClick={assign} disabled={!selected}>
-              Assign
-            </Button>
-          </div>
-        )}
-
-        {!loading && available.length === 0 && assigned.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            No roles exist yet.{" "}
-            <Link href="/dashboard/roles" className="underline underline-offset-2">
-              Create roles
-            </Link>{" "}
-            first.
-          </p>
-        )}
-
-        {!loading && available.length === 0 && assigned.length > 0 && (
-          <p className="text-sm text-muted-foreground">All available roles assigned.</p>
-        )}
-
+      <CardContent className="flex flex-col gap-4">
         {error && (
-          <p className="rounded-xl border border-destructive/20 bg-destructive/10 p-2 text-sm text-destructive">
-            {error}
-          </p>
+          <Alert variant="destructive">
+            <CircleAlertIcon />
+            <AlertTitle>Role update failed</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
+        <FieldGroup data-slot="checkbox-group">
+          {roles.map((role) => (
+            <Field
+              key={role.value}
+              orientation="horizontal"
+              data-disabled={readOnly || undefined}
+            >
+              <Checkbox
+                id={`identity-role-${role.value}`}
+                checked={selected.includes(role.value)}
+                nativeButton
+                aria-label={role.label}
+                onCheckedChange={(checked) =>
+                  !readOnly && toggle(role.value, checked)
+                }
+                disabled={readOnly}
+                aria-disabled={readOnly}
+                tabIndex={readOnly ? -1 : undefined}
+              />
+              <FieldContent>
+                <FieldLabel htmlFor={`identity-role-${role.value}`}>
+                  {role.label}
+                </FieldLabel>
+                <FieldDescription>{role.description}</FieldDescription>
+              </FieldContent>
+            </Field>
+          ))}
+        </FieldGroup>
       </CardContent>
+      <CardFooter className="justify-end">
+        <Button onClick={save} disabled={readOnly || pending}>
+          {pending ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <SaveIcon data-icon="inline-start" />
+          )}
+          {pending ? "Saving…" : "Save roles"}
+        </Button>
+      </CardFooter>
     </Card>
-  );
+  )
 }

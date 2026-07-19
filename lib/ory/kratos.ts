@@ -11,6 +11,7 @@ import type {
 
 import { getOryClients, type OryClients } from "@/lib/ory/clients"
 import { callOry, OryAdminError } from "@/lib/ory/result"
+import { maskCourierRecipient } from "@/lib/kratos/recipient"
 
 export type KratosIdentity = Omit<Identity, "credentials"> & {
   state: string
@@ -27,7 +28,17 @@ export type KratosSession = Omit<Session, "identity"> & {
 }
 
 export type KratosSchema = IdentitySchemaContainer
-export type CourierMessage = Message
+export type CourierMessage = Pick<
+  Message,
+  | "id"
+  | "status"
+  | "type"
+  | "template_type"
+  | "recipient"
+  | "created_at"
+  | "updated_at"
+  | "send_count"
+>
 
 const identityView = (identity: Identity): KratosIdentity => {
   const { credentials: _credentials, ...safeIdentity } = identity
@@ -66,6 +77,17 @@ const sessionView = (
     identity,
   }
 }
+
+const courierMessageView = (message: Message): CourierMessage => ({
+  id: message.id,
+  status: message.status,
+  type: message.type,
+  template_type: message.template_type,
+  recipient: maskCourierRecipient(message.recipient),
+  created_at: message.created_at,
+  updated_at: message.updated_at,
+  send_count: message.send_count,
+})
 
 export const createKratosService = (
   clients: () => Pick<OryClients, "kratosIdentities" | "kratosCourier">,
@@ -179,17 +201,9 @@ export const createKratosService = (
     const response = await callOry(() =>
       clients().kratosCourier.listCourierMessages({ pageSize }),
     )
-    return response.data
+    return response.data.map(courierMessageView)
   },
 
-  retryMessage: async (_id: string): Promise<CourierMessage> => {
-    void _id
-    throw new OryAdminError(
-      405,
-      "operation_not_supported",
-      "Courier delivery retry is not supported",
-    )
-  },
 })
 
 export const kratos = createKratosService(getOryClients)
