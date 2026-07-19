@@ -1,87 +1,195 @@
-const BASE = process.env.KRATOS_ADMIN_URL ?? "http://localhost:4434";
+import "server-only"
 
-async function oryFetch(path: string, init?: RequestInit) {
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Kratos ${res.status}: ${text}`);
+import type {
+  Identity,
+  IdentitySchemaContainer,
+  JsonPatch,
+  Message,
+  Session,
+  UpdateIdentityBody,
+} from "@ory/client"
+
+import { getOryClients, type OryClients } from "@/lib/ory/clients"
+import { callOry, OryAdminError } from "@/lib/ory/result"
+
+export type KratosIdentity = Omit<Identity, "credentials"> & {
+  state: string
+  created_at: string
+  updated_at: string
+  traits: Record<string, unknown>
+}
+
+export type KratosSession = Omit<Session, "identity"> & {
+  active: boolean
+  expires_at: string
+  authenticated_at: string
+  identity: KratosIdentity
+}
+
+export type KratosSchema = IdentitySchemaContainer
+export type CourierMessage = Message
+
+const identityView = (identity: Identity): KratosIdentity => {
+  const { credentials: _credentials, ...safeIdentity } = identity
+  void _credentials
+  return {
+    ...safeIdentity,
+    state: identity.state ?? "inactive",
+    traits:
+      identity.traits && typeof identity.traits === "object"
+        ? identity.traits
+        : {},
+    created_at: identity.created_at ?? "",
+    updated_at: identity.updated_at ?? "",
   }
-  return res.status === 204 ? null : res.json();
 }
 
-export interface KratosIdentity {
-  id: string;
-  schema_id: string;
-  state: string;
-  traits: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
+const sessionView = (
+  session: Session,
+  fallbackIdentity?: KratosIdentity,
+): KratosSession => {
+  const identity = session.identity
+    ? identityView(session.identity)
+    : fallbackIdentity
+  if (!identity) {
+    throw new OryAdminError(
+      502,
+      "ory_invalid_response",
+      "ORY administrator API returned an invalid response",
+    )
+  }
+  return {
+    ...session,
+    active: session.active ?? false,
+    expires_at: session.expires_at ?? "",
+    authenticated_at: session.authenticated_at ?? "",
+    identity,
+  }
 }
 
-export interface KratosSession {
-  id: string;
-  active: boolean;
-  expires_at: string;
-  authenticated_at: string;
-  identity: KratosIdentity;
-}
+export const createKratosService = (
+  clients: () => Pick<OryClients, "kratosIdentities" | "kratosCourier">,
+) => ({
+  listIdentities: async (
+    _page = 1,
+    pageSize = 50,
+  ): Promise<KratosIdentity[]> => {
+    void _page
+    const response = await callOry(() =>
+      clients().kratosIdentities.listIdentities({ pageSize }),
+    )
+    return response.data.map(identityView)
+  },
 
-export interface KratosSchema {
-  id: string;
-  url: string;
-}
+  getIdentity: async (id: string): Promise<KratosIdentity> => {
+    const response = await callOry(() =>
+      clients().kratosIdentities.getIdentity({ id }),
+    )
+    return identityView(response.data)
+  },
 
-export interface CourierMessage {
-  id: string;
-  status: string;
-  type: string;
-  template_type: string;
-  recipient: string;
-  created_at: string;
-  send_count: number;
-}
+  deleteIdentity: async (id: string): Promise<null> => {
+    await callOry(() => clients().kratosIdentities.deleteIdentity({ id }))
+    return null
+  },
 
-export const kratos = {
-  listIdentities: (page = 1, perPage = 50): Promise<KratosIdentity[]> =>
-    oryFetch(`/admin/identities?page_size=${perPage}`),
+  patchIdentity: async (
+    id: string,
+    jsonPatch: JsonPatch[],
+  ): Promise<KratosIdentity> => {
+    const response = await callOry(() =>
+      clients().kratosIdentities.patchIdentity({ id, jsonPatch }),
+    )
+    return identityView(response.data)
+  },
 
-  getIdentity: (id: string): Promise<KratosIdentity> =>
-    oryFetch(`/admin/identities/${id}?include_credential=oidc`),
+  updateIdentity: async (
+    id: string,
+    updateIdentityBody: UpdateIdentityBody,
+  ): Promise<KratosIdentity> => {
+    const response = await callOry(() =>
+      clients().kratosIdentities.updateIdentity({ id, updateIdentityBody }),
+    )
+    return identityView(response.data)
+  },
 
-  deleteIdentity: (id: string): Promise<null> =>
-    oryFetch(`/admin/identities/${id}`, { method: "DELETE" }),
+  listSessions: async (
+    _page = 1,
+    pageSize = 50,
+  ): Promise<KratosSession[]> => {
+    void _page
+    const response = await callOry(() =>
+      clients().kratosIdentities.listSessions({
+        pageSize,
+        expand: ["identity"],
+      }),
+    )
+    return response.data.map((session) => sessionView(session))
+  },
 
-  patchIdentity: (id: string, patch: unknown): Promise<KratosIdentity> =>
-    oryFetch(`/admin/identities/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(patch),
-    }),
+  getIdentitySessions: async (id: string): Promise<KratosSession[]> => {
+    const response = await callOry(() =>
+      clients().kratosIdentities.listIdentitySessions({ id }),
+    )
+    const fallbackIdentity: KratosIdentity = {
+      id,
+      schema_id: "",
+      schema_url: "",
+      state: "inactive",
+      traits: {},
+      created_at: "",
+      updated_at: "",
+    }
+    return response.data.map((session) =>
+      sessionView(session, fallbackIdentity),
+    )
+  },
 
-  listSessions: (page = 1, perPage = 50): Promise<KratosSession[]> =>
-    oryFetch(`/admin/sessions?page_size=${perPage}&expand=Identity`),
+  revokeSession: async (id: string): Promise<null> => {
+    await callOry(() => clients().kratosIdentities.disableSession({ id }))
+    return null
+  },
 
-  getIdentitySessions: (id: string): Promise<KratosSession[]> =>
-    oryFetch(`/admin/identities/${id}/sessions`),
+  revokeAllSessions: async (id: string): Promise<{ count: number }> => {
+    await callOry(() =>
+      clients().kratosIdentities.deleteIdentitySessions({ id }),
+    )
+    return { count: 0 }
+  },
 
-  revokeSession: (sessionId: string): Promise<null> =>
-    oryFetch(`/admin/sessions/${sessionId}`, { method: "DELETE" }),
+  listSchemas: async (): Promise<KratosSchema[]> => {
+    const response = await callOry(() =>
+      clients().kratosIdentities.listIdentitySchemas(),
+    )
+    return response.data
+  },
 
-  revokeAllSessions: (identityId: string): Promise<{ count: number }> =>
-    oryFetch(`/admin/identities/${identityId}/sessions`, { method: "DELETE" }),
+  getSchemaContent: async (id: string): Promise<Record<string, unknown>> => {
+    const response = await callOry(() =>
+      clients().kratosIdentities.getIdentitySchema({ id }),
+    )
+    return response.data as Record<string, unknown>
+  },
 
-  listSchemas: (): Promise<KratosSchema[]> =>
-    oryFetch("/schemas"),
+  listMessages: async (
+    _page = 1,
+    pageSize = 50,
+  ): Promise<CourierMessage[]> => {
+    void _page
+    const response = await callOry(() =>
+      clients().kratosCourier.listCourierMessages({ pageSize }),
+    )
+    return response.data
+  },
 
-  listMessages: (page = 1, perPage = 50): Promise<CourierMessage[]> =>
-    oryFetch(`/admin/courier/messages?page_size=${perPage}`),
+  retryMessage: async (_id: string): Promise<CourierMessage> => {
+    void _id
+    throw new OryAdminError(
+      405,
+      "operation_not_supported",
+      "Courier delivery retry is not supported",
+    )
+  },
+})
 
-  getSchemaContent: (id: string): Promise<Record<string, unknown>> =>
-    oryFetch(`/schemas/${encodeURIComponent(id)}`),
-
-  retryMessage: (msgId: string): Promise<CourierMessage> =>
-    oryFetch(`/admin/courier/messages/${msgId}/deliver`, { method: "PATCH" }),
-};
+export const kratos = createKratosService(getOryClients)
