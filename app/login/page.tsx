@@ -1,4 +1,5 @@
 import { ShieldCheckIcon } from "lucide-react"
+import Link from "next/link"
 
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -11,6 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { translate } from "@/lib/i18n"
+import { getLocale } from "@/lib/i18n-server"
 
 interface LoginPageProps {
   searchParams: Promise<{ error?: string | string[] }>
@@ -19,6 +22,8 @@ interface LoginPageProps {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { error } = await searchParams
   const showError = typeof error === "string"
+  const locale = await getLocale().catch(() => "en" as const)
+  const t = (key: string) => translate(locale, key)
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
@@ -27,37 +32,30 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>VKWAVE Authentication Console</CardTitle>
-          <CardDescription>
-            Sign in through VKWAVE and complete AAL2 verification to administer
-            the authentication stack.
-          </CardDescription>
+          <CardTitle>{t("brand.loginTitle")}</CardTitle>
+          <CardDescription>{t("brand.loginDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           {showError ? (
             <Alert variant="destructive">
               <ShieldCheckIcon />
-              <AlertTitle>Authentication could not be completed</AlertTitle>
-              <AlertDescription>
-                Start the secure sign-in flow again. Provider details are not
-                shown here.
-              </AlertDescription>
+              <AlertTitle>{t("login.providerErrorTitle")}</AlertTitle>
+              <AlertDescription>{t("login.providerErrorDescription")}</AlertDescription>
             </Alert>
           ) : (
             <p className="text-sm text-muted-foreground">
-              The console never accepts or stores a separate administrator
-              password.
+              {t("login.noPassword")}
             </p>
           )}
         </CardContent>
         <CardFooter>
           <Button
             className="w-full"
-            render={<a href="/api/auth/start" />}
+            render={<Link href="/api/auth/start" />}
             nativeButton={false}
           >
             <ShieldCheckIcon data-icon="inline-start" />
-            Continue with VKWAVE
+            {t("login.continue")}
           </Button>
         </CardFooter>
       </Card>

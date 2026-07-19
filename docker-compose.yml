@@ -1,24 +1,35 @@
 services:
-  ory-console:
+  vkwave-auth-console:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     environment:
-      - KRATOS_ADMIN_URL=http://kratos:4434
-      - HYDRA_ADMIN_URL=http://hydra:4445
-      - KETO_READ_URL=http://keto:4466
-      - KETO_WRITE_URL=http://keto:4467
-      - SESSION_SECRET=${OC_SESSION_SECRET:-ory-console-secret-32-chars-minimum!!}
-      - SESSION_COOKIE_NAME=ory_console_session
-      - ADMIN_EMAIL=${OC_ADMIN_EMAIL:-admin@example.com}
-      - ADMIN_PASSWORD=${OC_ADMIN_PASSWORD:-change-this-password}
+      NODE_ENV: production
+      AUTH_ADMIN_URL: ${AUTH_ADMIN_URL:?set AUTH_ADMIN_URL}
+      OIDC_ISSUER: ${OIDC_ISSUER:?set OIDC_ISSUER}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?set OIDC_CLIENT_ID}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?set OIDC_CLIENT_SECRET}
+      OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:?set OIDC_REDIRECT_URI}
+      OIDC_REQUIRED_ACR: ${OIDC_REQUIRED_ACR:-aal2}
+      HYDRA_PUBLIC_URL: ${HYDRA_PUBLIC_URL:-http://hydra-public:4444}
+      HYDRA_ADMIN_URL: ${HYDRA_ADMIN_URL:-http://hydra-admin:4445}
+      KRATOS_ADMIN_URL: ${KRATOS_ADMIN_URL:-http://kratos-admin:4434}
+      ADAPTER_INTERNAL_URL: ${ADAPTER_INTERNAL_URL:-http://mcp-oauth-adapter:8081}
+      ADAPTER_CONSOLE_CLIENT_ID: ${ADAPTER_CONSOLE_CLIENT_ID:-auth-admin-console}
+      ADAPTER_CONSOLE_CLIENT_SECRET: ${ADAPTER_CONSOLE_CLIENT_SECRET:?set ADAPTER_CONSOLE_CLIENT_SECRET}
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-__Host-vkwave_admin}
+      ADMIN_ROLE: ${ADMIN_ROLE:-auth_admin}
+      SECURITY_OPERATOR_ROLE: ${SECURITY_OPERATOR_ROLE:-security_operator}
+      ROLE_RECHECK_SECONDS: ${ROLE_RECHECK_SECONDS:-300}
+      CONSOLE_ALLOW_INSECURE_DEV: "false"
     networks:
-      - ory
+      - auth-internal
     restart: unless-stopped
 
 networks:
-  ory:
+  auth-internal:
     external: true
-    name: votz_ory
+    name: ${AUTH_INTERNAL_NETWORK:-vkwave-auth-internal}
