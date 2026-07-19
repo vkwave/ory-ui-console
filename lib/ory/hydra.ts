@@ -24,17 +24,25 @@ export type HydraClient = OAuth2Client & {
 export type ConsentSession = OAuth2ConsentSession
 export type JWKSet = JsonWebKeySet
 
-const clientView = (client: OAuth2Client): HydraClient => ({
-  ...client,
-  client_id: client.client_id ?? "",
-  client_name: client.client_name ?? "",
-  redirect_uris: client.redirect_uris ?? [],
-  grant_types: client.grant_types ?? [],
-  scope: client.scope ?? "",
-  token_endpoint_auth_method: client.token_endpoint_auth_method ?? "",
-  created_at: client.created_at ?? "",
-  updated_at: client.updated_at ?? "",
-})
+const clientView = (
+  client: OAuth2Client,
+  includeOneTimeSecret = false,
+): HydraClient => {
+  const safe = { ...client }
+  delete safe.registration_access_token
+  if (!includeOneTimeSecret) delete safe.client_secret
+  return {
+    ...safe,
+    client_id: client.client_id ?? "",
+    client_name: client.client_name ?? "",
+    redirect_uris: client.redirect_uris ?? [],
+    grant_types: client.grant_types ?? [],
+    scope: client.scope ?? "",
+    token_endpoint_auth_method: client.token_endpoint_auth_method ?? "",
+    created_at: client.created_at ?? "",
+    updated_at: client.updated_at ?? "",
+  }
+}
 
 export const createHydraService = (
   clients: () => Pick<OryClients, "hydraAdmin" | "hydraJWK">,
@@ -44,7 +52,7 @@ export const createHydraService = (
     const response = await callOry(() =>
       clients().hydraAdmin.listOAuth2Clients({ pageSize }),
     )
-    return response.data.map(clientView)
+    return response.data.map((client) => clientView(client))
   },
 
   getClient: async (id: string): Promise<HydraClient> => {
@@ -58,7 +66,7 @@ export const createHydraService = (
     const response = await callOry(() =>
       clients().hydraAdmin.createOAuth2Client({ oAuth2Client: body }),
     )
-    return clientView(response.data)
+    return clientView(response.data, true)
   },
 
   updateClient: async (
@@ -81,7 +89,7 @@ export const createHydraService = (
     const response = await callOry(() =>
       clients().hydraAdmin.patchOAuth2Client({ id, jsonPatch }),
     )
-    return clientView(response.data)
+    return clientView(response.data, true)
   },
 
   deleteClient: async (id: string): Promise<null> => {

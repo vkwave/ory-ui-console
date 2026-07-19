@@ -56,6 +56,28 @@ describe("official ORY clients", () => {
     expect(getIdentity).toHaveBeenCalledWith({ id: "identity-1" })
   })
 
+  it("strips retrievable client credentials from list and detail reads", async () => {
+    const secretClient = {
+      client_id: "client-1",
+      client_secret: "must-not-reach-a-read-page",
+      registration_access_token: "must-not-reach-a-read-page-either",
+    }
+    const hydra = createHydraService(() => ({
+      hydraAdmin: {
+        listOAuth2Clients: vi.fn().mockResolvedValue({ data: [secretClient] }),
+        getOAuth2Client: vi.fn().mockResolvedValue({ data: secretClient }),
+      } as never,
+      hydraJWK: {} as never,
+    }))
+
+    const listed = await hydra.listClients()
+    const detailed = await hydra.getClient("client-1")
+
+    expect(JSON.stringify([listed, detailed])).not.toMatch(
+      /must-not-reach|client_secret|registration_access_token/,
+    )
+  })
+
   it("normalizes SDK failures without exposing upstream bodies", () => {
     const error = normalizeOryError({
       isAxiosError: true,
