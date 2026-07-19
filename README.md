@@ -93,6 +93,9 @@ The browser integration suite uses local mock OIDC, Hydra, Kratos, and adapter
 servers. A real login must be verified again in the auth-stack Compose
 integration environment before production promotion.
 
+The complete deployment and bootstrap contract is in
+[SECURITY-PRODUCTION.md](SECURITY-PRODUCTION.md).
+
 ## License and upstream
 
 The upstream project and its dependencies retain their original licenses and

@@ -1,0 +1,8 @@
+{
+  "client_id": "https://raw.githubusercontent.com/vkwave/ory-ui-console/1.0.0-vkwave.1/test/fixtures/cimd/integration-client.json",
+  "client_name": "VKWAVE MCP Integration Client",
+  "redirect_uris": ["http://127.0.0.1:37123/callback"],
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none"
+}

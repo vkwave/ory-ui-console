@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   completeAuthorization: vi.fn(),
   destroy: vi.fn(),
   getSession: vi.fn(),
+  loadConfig: vi.fn(),
 }))
 
 vi.mock("@/lib/auth/oidc", () => ({
@@ -15,6 +16,7 @@ vi.mock("@/lib/auth/oidc", () => ({
   completeAuthorization: mocks.completeAuthorization,
 }))
 vi.mock("@/lib/session", () => ({ getSession: mocks.getSession }))
+vi.mock("@/lib/config", () => ({ loadConfig: mocks.loadConfig }))
 
 import { GET as callback } from "@/app/api/auth/callback/route"
 import { POST as logout } from "@/app/api/auth/logout/route"
@@ -28,6 +30,9 @@ describe("administrator auth routes", () => {
     )
     mocks.completeAuthorization.mockResolvedValue(undefined)
     mocks.getSession.mockResolvedValue({ destroy: mocks.destroy })
+    mocks.loadConfig.mockReturnValue({
+      adminOrigin: new URL("https://auth-admin.example.test"),
+    })
   })
 
   it("redirects the start route only to the authorization URL", async () => {
@@ -53,7 +58,7 @@ describe("administrator auth routes", () => {
   it("uses fixed callback destinations and destroys sessions on logout", async () => {
     const failed = await callback(
       new NextRequest(
-        "https://auth-admin.example.test/api/auth/callback?error=access_denied&error_description=raw-secret",
+        "http://internal-console:3000/api/auth/callback?error=access_denied&error_description=raw-secret",
       ),
     )
     expect(failed.headers.get("location")).toBe(
@@ -63,7 +68,7 @@ describe("administrator auth routes", () => {
 
     const succeeded = await callback(
       new NextRequest(
-        "https://auth-admin.example.test/api/auth/callback?code=code-1&state=state-1",
+        "http://internal-console:3000/api/auth/callback?code=code-1&state=state-1",
       ),
     )
     expect(mocks.completeAuthorization).toHaveBeenCalledWith(
