@@ -95,9 +95,12 @@ export const validateIDToken = async (
   })
   const amr = payload.amr
   const hasRequiredAcr = payload.acr === config.requiredAcr
+  // Hydra v26.2 serializes the empty ACR accepted from Kratos as "0".
+  const hasEmptyHydraAcr =
+    payload.acr === undefined || payload.acr === "" || payload.acr === "0"
   const hasAAL2AMRFallback =
     config.requiredAcr === "aal2" &&
-    (payload.acr === undefined || payload.acr === "") &&
+    hasEmptyHydraAcr &&
     Array.isArray(amr) &&
     amr.length >= 2 &&
     amr.every((method) => typeof method === "string") &&

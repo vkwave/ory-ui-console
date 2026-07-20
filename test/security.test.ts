@@ -140,6 +140,7 @@ describe("security output boundaries", () => {
 
     expect(response.headers.get("cache-control")).toBe("no-store")
     expect(await response.json()).toEqual({
+      acr: "aal2",
       csrfToken,
       subject: "identity-1",
       roles: ["auth_admin"],

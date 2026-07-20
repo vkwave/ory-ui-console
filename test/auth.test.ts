@@ -64,6 +64,7 @@ describe("administrator OIDC", () => {
   it.each([
     ["missing", undefined],
     ["empty", ""],
+    ["Hydra v26.2 zero sentinel", "0"],
   ])(
     "accepts official password plus TOTP AMR when ACR is %s",
     async (_description, acr) => {
@@ -98,6 +99,25 @@ describe("administrator OIDC", () => {
       validateIDToken(token, "n-1", { env: validEnv, jwks }),
     ).rejects.toThrow(/assurance/)
   })
+
+  it.each([
+    ["password-only", ["password"]],
+    ["TOTP-only", ["totp"]],
+    ["unknown secondary method", ["password", "sms"]],
+  ])(
+    "rejects Hydra zero-sentinel ACR with %s evidence",
+    async (_description, amr) => {
+      const { token, jwks } = await signIDToken({
+        nonce: "n-1",
+        acr: "0",
+        amr,
+      })
+
+      await expect(
+        validateIDToken(token, "n-1", { env: validEnv, jwks }),
+      ).rejects.toThrow(/assurance/)
+    },
+  )
 
   it("does not use the AMR fallback for a non-aal2 requirement", async () => {
     const { token, jwks } = await signIDToken({
