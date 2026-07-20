@@ -3,7 +3,9 @@ import "server-only"
 import { z } from "zod"
 
 const schema = z.object({
-  NODE_ENV: z.enum(["development", "test", "production"]),
+  CONSOLE_DEPLOYMENT_MODE: z
+    .enum(["development", "production"])
+    .default("production"),
   AUTH_ADMIN_URL: z.url(),
   OIDC_ISSUER: z.url(),
   OIDC_CLIENT_ID: z.string().min(1),
@@ -56,7 +58,7 @@ export const loadConfig = (
   env: NodeJS.ProcessEnv = process.env,
 ): ConsoleConfig => {
   const value = schema.parse(env)
-  const production = value.NODE_ENV === "production"
+  const production = value.CONSOLE_DEPLOYMENT_MODE === "production"
   const allowInsecure = value.CONSOLE_ALLOW_INSECURE_DEV === "true"
   const adminOrigin = new URL(value.AUTH_ADMIN_URL)
   const redirect = new URL(value.OIDC_REDIRECT_URI)

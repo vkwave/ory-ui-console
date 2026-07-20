@@ -5,6 +5,49 @@ import { loadConfig } from "@/lib/config"
 import { validEnv } from "./env"
 
 describe("console configuration", () => {
+  it("uses the explicit development policy in a production-built runtime", () => {
+    const config = loadConfig({
+      ...validEnv,
+      NODE_ENV: "production",
+      CONSOLE_DEPLOYMENT_MODE: "development",
+      AUTH_ADMIN_URL: "http://auth-admin.localhost:18081",
+      OIDC_ISSUER: "http://auth.localhost:18080",
+      OIDC_REDIRECT_URI:
+        "http://auth-admin.localhost:18081/api/auth/callback",
+      SESSION_COOKIE_NAME: "vkwave_admin_dev",
+      CONSOLE_ALLOW_INSECURE_DEV: "true",
+    })
+
+    expect(config.production).toBe(false)
+    expect(config.secureCookie).toBe(false)
+  })
+
+  it("keeps the explicit and default production policies fail-closed", () => {
+    const insecureEnvironment: NodeJS.ProcessEnv = {
+      ...validEnv,
+      NODE_ENV: "development",
+      AUTH_ADMIN_URL: "http://auth-admin.localhost:18081",
+      OIDC_ISSUER: "http://auth.localhost:18080",
+      OIDC_REDIRECT_URI:
+        "http://auth-admin.localhost:18081/api/auth/callback",
+      SESSION_COOKIE_NAME: "vkwave_admin_dev",
+      CONSOLE_ALLOW_INSECURE_DEV: "true",
+    }
+
+    expect(() =>
+      loadConfig({
+        ...insecureEnvironment,
+        CONSOLE_DEPLOYMENT_MODE: "production",
+      }),
+    ).toThrow(/production console origins must use HTTPS/)
+    expect(() =>
+      loadConfig({
+        ...insecureEnvironment,
+        CONSOLE_DEPLOYMENT_MODE: undefined,
+      }),
+    ).toThrow(/production console origins must use HTTPS/)
+  })
+
   it("derives fixed internal and public endpoints", () => {
     const config = loadConfig(validEnv)
 
@@ -24,6 +67,7 @@ describe("console configuration", () => {
       loadConfig({
         ...validEnv,
         NODE_ENV: "production",
+        CONSOLE_DEPLOYMENT_MODE: "production",
         CONSOLE_ALLOW_INSECURE_DEV: "false",
         SESSION_COOKIE_NAME: "vkwave_admin",
       }),

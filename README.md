@@ -26,6 +26,7 @@ upstream synchronization is recorded in [UPSTREAM.md](UPSTREAM.md).
 
 ```env
 NODE_ENV=production
+CONSOLE_DEPLOYMENT_MODE=production
 AUTH_ADMIN_URL=https://auth-admin.example.test
 OIDC_ISSUER=https://auth.example.test
 OIDC_CLIENT_ID=vkwave-auth-admin
@@ -46,9 +47,12 @@ ROLE_RECHECK_SECONDS=300
 CONSOLE_ALLOW_INSECURE_DEV=false
 ```
 
-`AUTH_ADMIN_URL` and `OIDC_REDIRECT_URI` must share an origin and the exact
-callback path. Production requires HTTPS for the public issuer and console
-origin, and a `__Host-` session cookie name. `HYDRA_PUBLIC_URL`,
+`CONSOLE_DEPLOYMENT_MODE` is the runtime security-policy selector and defaults
+to `production`; it does not derive from Next.js `NODE_ENV`. `AUTH_ADMIN_URL`
+and `OIDC_REDIRECT_URI` must share an origin and the exact callback path.
+Production requires HTTPS for the public issuer and console origin, forbids
+the insecure development override, and requires a `__Host-` session cookie
+name. `HYDRA_PUBLIC_URL`,
 `HYDRA_ADMIN_URL`, `KRATOS_ADMIN_URL`, and `ADAPTER_INTERNAL_URL` are server
 network addresses; they are never exposed to browser code.
 
@@ -61,9 +65,11 @@ npm ci
 npm run dev
 ```
 
-For local HTTP only, set `NODE_ENV=development`, use a non-production cookie
-name, and set `CONSOLE_ALLOW_INSECURE_DEV=true`. The local OIDC client still
-needs an exact callback at `/api/auth/callback`.
+For local HTTP only, set `CONSOLE_DEPLOYMENT_MODE=development`, use a
+non-production cookie name, and set `CONSOLE_ALLOW_INSECURE_DEV=true`.
+Released Next.js images continue to run with `NODE_ENV=production`; deployment
+mode is evaluated independently at runtime. The local OIDC client still needs
+an exact callback at `/api/auth/callback`.
 
 ## Compose
 

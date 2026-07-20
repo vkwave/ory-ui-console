@@ -11,6 +11,7 @@ const next = spawn(
     env: {
       ...process.env,
       NODE_ENV: "development",
+      CONSOLE_DEPLOYMENT_MODE: "development",
       AUTH_ADMIN_URL: "http://127.0.0.1:3100",
       OIDC_ISSUER: "http://127.0.0.1:4555",
       OIDC_CLIENT_ID: "vkwave-auth-admin",

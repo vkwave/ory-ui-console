@@ -11,7 +11,10 @@ Production must provide every value below through the auth-stack deployment
 secret mechanism. Do not commit a `.env` file or place these values in a
 browser-exposed variable:
 
-- `NODE_ENV=production` and `CONSOLE_ALLOW_INSECURE_DEV=false`.
+- `NODE_ENV=production`, `CONSOLE_DEPLOYMENT_MODE=production`, and
+  `CONSOLE_ALLOW_INSECURE_DEV=false`. The deployment mode defaults to
+  production and is the runtime security-policy selector; `NODE_ENV` is only
+  the Next.js build/runtime setting.
 - `AUTH_ADMIN_URL=https://auth-admin.vkwave.com` and an exact
   `OIDC_REDIRECT_URI` ending in `/api/auth/callback` on the same origin.
 - `OIDC_ISSUER=https://auth.vkwave.com`, `OIDC_CLIENT_ID`, and a rotated

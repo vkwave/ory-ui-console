@@ -7,6 +7,7 @@ services:
       - "127.0.0.1:3001:3000"
     environment:
       NODE_ENV: production
+      CONSOLE_DEPLOYMENT_MODE: production
       AUTH_ADMIN_URL: ${AUTH_ADMIN_URL:?set AUTH_ADMIN_URL}
       OIDC_ISSUER: ${OIDC_ISSUER:?set OIDC_ISSUER}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?set OIDC_CLIENT_ID}

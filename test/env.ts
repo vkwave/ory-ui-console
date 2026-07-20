@@ -1,5 +1,6 @@
 export const validEnv: NodeJS.ProcessEnv = {
   NODE_ENV: "test",
+  CONSOLE_DEPLOYMENT_MODE: "development",
   AUTH_ADMIN_URL: "https://auth-admin.example.test",
   OIDC_ISSUER: "https://auth.example.test",
   OIDC_CLIENT_ID: "vkwave-auth-admin",
