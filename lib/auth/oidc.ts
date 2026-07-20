@@ -90,12 +90,28 @@ export const validateIDToken = async (
   const { payload } = await jwtVerify(token, createLocalJWKSet(jwks), {
     issuer: config.issuer.href.replace(/\/$/, ""),
     audience: config.clientID,
-    requiredClaims: ["sub", "exp", "iat", "nonce", "acr"],
+    requiredClaims: ["sub", "exp", "iat", "nonce"],
     clockTolerance: 30,
   })
-  if (payload.nonce !== nonce || payload.acr !== config.requiredAcr) {
+  const amr = payload.amr
+  const hasRequiredAcr = payload.acr === config.requiredAcr
+  const hasAAL2AMRFallback =
+    config.requiredAcr === "aal2" &&
+    (payload.acr === undefined || payload.acr === "") &&
+    Array.isArray(amr) &&
+    amr.length >= 2 &&
+    amr.every((method) => typeof method === "string") &&
+    amr.includes("password") &&
+    ["totp", "webauthn", "passkey", "lookup_secret"].some((method) =>
+      amr.includes(method),
+    )
+  if (
+    payload.nonce !== nonce ||
+    (!hasRequiredAcr && !hasAAL2AMRFallback)
+  ) {
     throw new Error("OIDC nonce or assurance level is invalid")
   }
+  if (hasAAL2AMRFallback) payload.acr = config.requiredAcr
   return payload
 }
 

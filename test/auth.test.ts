@@ -16,6 +16,24 @@ import { sessionOptions, type SessionData } from "@/lib/session"
 
 import { validEnv } from "./env"
 
+const signIDToken = async (claims: Record<string, unknown>) => {
+  const { privateKey, publicKey } = await generateKeyPair("RS256")
+  const jwk = await exportJWK(publicKey)
+  const token = await new SignJWT(claims)
+    .setProtectedHeader({ alg: "RS256", kid: "k-1" })
+    .setIssuer(validEnv.OIDC_ISSUER!)
+    .setAudience(validEnv.OIDC_CLIENT_ID!)
+    .setSubject("identity-1")
+    .setIssuedAt()
+    .setExpirationTime("5m")
+    .sign(privateKey)
+
+  return {
+    token,
+    jwks: { keys: [{ ...jwk, kid: "k-1", alg: "RS256", use: "sig" }] },
+  }
+}
+
 describe("administrator OIDC", () => {
   it("requires issuer, audience, nonce, and aal2", async () => {
     const { privateKey, publicKey } = await generateKeyPair("RS256")
@@ -41,6 +59,58 @@ describe("administrator OIDC", () => {
     await expect(
       validateIDToken(token, "wrong", { env: validEnv, jwks }),
     ).rejects.toThrow(/nonce|assurance/)
+  })
+
+  it.each([
+    ["missing", undefined],
+    ["empty", ""],
+  ])(
+    "accepts official password plus TOTP AMR when ACR is %s",
+    async (_description, acr) => {
+      const claims: Record<string, unknown> = {
+        nonce: "n-1",
+        amr: ["password", "totp"],
+      }
+      if (acr !== undefined) claims.acr = acr
+      const { token, jwks } = await signIDToken(claims)
+
+      const payload = await validateIDToken(token, "n-1", {
+        env: validEnv,
+        jwks,
+      })
+
+      expect(payload.acr).toBe("aal2")
+      expect(payload.amr).toEqual(["password", "totp"])
+    },
+  )
+
+  it.each([
+    ["password-only", ["password"]],
+    ["TOTP-only", ["totp"]],
+    ["unknown secondary method", ["password", "sms"]],
+    ["no approved secondary factor", ["password", "mfa"]],
+    ["non-array AMR", "password totp"],
+    ["insufficient string AMR cardinality", ["password", 1]],
+  ])("rejects %s fallback evidence", async (_description, amr) => {
+    const { token, jwks } = await signIDToken({ nonce: "n-1", amr })
+
+    await expect(
+      validateIDToken(token, "n-1", { env: validEnv, jwks }),
+    ).rejects.toThrow(/assurance/)
+  })
+
+  it("does not use the AMR fallback for a non-aal2 requirement", async () => {
+    const { token, jwks } = await signIDToken({
+      nonce: "n-1",
+      amr: ["password", "totp"],
+    })
+
+    await expect(
+      validateIDToken(token, "n-1", {
+        env: { ...validEnv, OIDC_REQUIRED_ACR: "aal3" },
+        jwks,
+      }),
+    ).rejects.toThrow(/assurance/)
   })
 
   it("rejects an inactive identity or missing auth_admin role", async () => {
