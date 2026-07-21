@@ -8,6 +8,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { requireAdmin } from "@/lib/auth/require-admin"
 import { getLocale } from "@/lib/i18n-server"
 import { MenuIcon } from "lucide-react"
 
@@ -16,6 +17,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  await requireAdmin(false)
   const locale = await getLocale()
   return <DashboardShell locale={locale}>{children}</DashboardShell>
 }

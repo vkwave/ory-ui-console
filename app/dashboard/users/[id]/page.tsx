@@ -21,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { requireAdmin } from "@/lib/auth/require-admin"
 import { rolesForIdentity } from "@/lib/kratos/identity-operations"
 import { checkOryHealth, type OryHealth } from "@/lib/ory/health"
 import {
@@ -44,6 +45,7 @@ export default async function UserDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  await requireAdmin(false)
   const { id } = await params
   const [healthResult, identityResult, sessionsResult] =
     await Promise.allSettled([

@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { requireAdmin } from "@/lib/auth/require-admin"
 import { kratos } from "@/lib/ory/kratos"
 
 export const dynamic = "force-dynamic"
@@ -23,6 +24,7 @@ export default async function SchemaDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  await requireAdmin(false)
   const { id } = await params
   const schemaID = decodeURIComponent(id)
   const result = await kratos.getSchemaContent(schemaID).then(

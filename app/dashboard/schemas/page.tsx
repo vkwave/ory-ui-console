@@ -10,11 +10,13 @@ import {
   AlertTitle,
 } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { requireAdmin } from "@/lib/auth/require-admin"
 import { kratos, type KratosSchema } from "@/lib/ory/kratos"
 
 export const dynamic = "force-dynamic"
 
 export default async function SchemasPage() {
+  await requireAdmin(false)
   const result = await kratos.listSchemas().then(
     (schemas) => ({ schemas, error: false }),
     () => ({ schemas: [] as KratosSchema[], error: true }),

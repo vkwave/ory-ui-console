@@ -7,11 +7,13 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert"
+import { requireAdmin } from "@/lib/auth/require-admin"
 import { checkOryHealth } from "@/lib/ory/health"
 
 export const dynamic = "force-dynamic"
 
 export default async function NewOAuthClientPage() {
+  await requireAdmin(false)
   const health = await checkOryHealth().catch(() => ({ readOnly: true }))
 
   return (

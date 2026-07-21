@@ -24,6 +24,7 @@ import {
   adapterLifecycle,
   disabledSnapshot,
 } from "@/lib/hydra/lifecycle"
+import { requireAdmin } from "@/lib/auth/require-admin"
 import { checkOryHealth, type OryHealth } from "@/lib/ory/health"
 import { hydra } from "@/lib/ory/hydra"
 import { fmtDate } from "@/lib/utils"
@@ -42,6 +43,7 @@ export default async function ClientDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  await requireAdmin(false)
   const { id } = await params
   const clientID = decodeURIComponent(id)
   const [healthResult, clientResult] = await Promise.allSettled([

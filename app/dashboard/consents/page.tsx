@@ -98,17 +98,23 @@ export default function ConsentsPage() {
     {
       key: "revoke",
       header: "",
-      cell: (session) => (
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => revoke(session.consent_request?.client?.client_id)}
-          disabled={pending}
-        >
-          <Trash2Icon data-icon="inline-start" />
-          Revoke
-        </Button>
-      ),
+      cell: (session) => {
+        const clientID = session.consent_request?.client?.client_id
+
+        return (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+              if (clientID) void revoke(clientID)
+            }}
+            disabled={pending || !clientID}
+          >
+            <Trash2Icon data-icon="inline-start" />
+            Revoke
+          </Button>
+        )
+      },
     },
   ]
 

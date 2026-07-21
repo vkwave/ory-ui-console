@@ -11,6 +11,7 @@ import {
   AlertTitle,
 } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { requireAdmin } from "@/lib/auth/require-admin"
 import { checkOryHealth, type OryHealth } from "@/lib/ory/health"
 import { kratos, type KratosSession } from "@/lib/ory/kratos"
 import { fmtDate } from "@/lib/utils"
@@ -25,6 +26,7 @@ const unavailable: OryHealth = {
 }
 
 export default async function SessionsPage() {
+  await requireAdmin(false)
   const [healthResult, sessionsResult] = await Promise.allSettled([
     checkOryHealth(),
     kratos.listSessions(1, 200),

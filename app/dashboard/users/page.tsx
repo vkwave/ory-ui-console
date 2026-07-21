@@ -10,6 +10,7 @@ import {
   AlertTitle,
 } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { requireAdmin } from "@/lib/auth/require-admin"
 import { checkOryHealth, type OryHealth } from "@/lib/ory/health"
 import { kratos, type KratosIdentity } from "@/lib/ory/kratos"
 import { fmtDate } from "@/lib/utils"
@@ -24,6 +25,7 @@ const unavailable: OryHealth = {
 }
 
 export default async function UsersPage() {
+  await requireAdmin(false)
   const [healthResult, identitiesResult] = await Promise.allSettled([
     checkOryHealth(),
     kratos.listIdentities(1, 200),

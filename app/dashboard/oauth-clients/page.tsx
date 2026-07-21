@@ -15,6 +15,7 @@ import {
   adapterLifecycle,
   disabledSnapshot,
 } from "@/lib/hydra/lifecycle"
+import { requireAdmin } from "@/lib/auth/require-admin"
 import { checkOryHealth, type OryHealth } from "@/lib/ory/health"
 import { hydra, type HydraClient } from "@/lib/ory/hydra"
 import { fmtDate, truncate } from "@/lib/utils"
@@ -29,6 +30,7 @@ const unavailable: OryHealth = {
 }
 
 export default async function OAuthClientsPage() {
+  await requireAdmin(false)
   const [healthResult, clientsResult] = await Promise.allSettled([
     checkOryHealth(),
     hydra.listClients(1, 200),

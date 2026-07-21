@@ -49,12 +49,26 @@ describe("OAuth client mutation routes", () => {
   })
 
   it("fails closed when Hydra does not return the rotated secret", async () => {
+    const auditFailure = vi.fn()
+    mocks.runAuditedOperation.mockImplementation(
+      async ({ operation }: { operation: () => Promise<unknown> }) => {
+        try {
+          return await operation()
+        } catch (error) {
+          auditFailure(error)
+          throw error
+        }
+      },
+    )
     mocks.rotate.mockResolvedValue({ client_id: "client-1" })
 
     const response = await rotateClient(request, context)
 
     expect(response.status).toBe(502)
     expect(await response.json()).toEqual({ error: "rotation_secret_missing" })
+    expect(auditFailure).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "rotation_secret_missing" }),
+    )
   })
 
   it("returns the new secret once with no-store", async () => {

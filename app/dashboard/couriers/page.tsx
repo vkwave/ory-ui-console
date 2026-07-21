@@ -8,12 +8,14 @@ import {
   AlertTitle,
 } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { requireAdmin } from "@/lib/auth/require-admin"
 import { kratos, type CourierMessage } from "@/lib/ory/kratos"
 import { fmtDate } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
 export default async function CouriersPage() {
+  await requireAdmin(false)
   const result = await kratos.listMessages(1, 100).then(
     (messages) => ({ messages, error: null as string | null }),
     () => ({ messages: [] as CourierMessage[], error: "Courier messages are unavailable." }),

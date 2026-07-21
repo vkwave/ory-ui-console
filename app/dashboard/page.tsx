@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { requireAdmin } from "@/lib/auth/require-admin"
 import { translate } from "@/lib/i18n"
 import { getLocale } from "@/lib/i18n-server"
 import { hydra } from "@/lib/ory/hydra"
@@ -36,6 +37,7 @@ const getStats = async () => {
 }
 
 export default async function DashboardPage() {
+  await requireAdmin(false)
   const [locale, stats] = await Promise.all([getLocale(), getStats()])
   const t = (key: string) => translate(locale, key)
   const cards = [

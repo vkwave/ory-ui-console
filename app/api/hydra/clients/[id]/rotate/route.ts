@@ -25,11 +25,14 @@ export const POST = async (
       targetID: id,
       before: { client_id: id },
       after: { client_id: id },
-      operation: () => clientOperations.rotate(id),
+      operation: async () => {
+        const rotated = await clientOperations.rotate(id)
+        if (!rotated.client_secret) {
+          throw new ClientLifecycleError("rotation_secret_missing", 502)
+        }
+        return rotated
+      },
     })
-    if (!client.client_secret) {
-      throw new ClientLifecycleError("rotation_secret_missing", 502)
-    }
     return Response.json(
       { client_id: id, client_secret: client.client_secret },
       { headers: { "Cache-Control": "no-store" } },
