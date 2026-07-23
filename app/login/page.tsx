@@ -1,5 +1,4 @@
 import { ShieldCheckIcon } from "lucide-react"
-import Link from "next/link"
 
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -51,7 +50,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <CardFooter>
           <Button
             className="w-full"
-            render={<Link href="/api/auth/start" />}
+            render={<a href="/api/auth/start" />}
             nativeButton={false}
           >
             <ShieldCheckIcon data-icon="inline-start" />
