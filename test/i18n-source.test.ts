@@ -35,8 +35,14 @@ describe("dashboard localization contracts", () => {
     expect(translate("en", "sessions.revokeFailed")).toBe(
       "Session revocation failed",
     )
+    expect(translate("en", "sessions.revokeErrorDescription")).toBe(
+      "The sessions could not be revoked. Try again.",
+    )
     expect(translate("zh-CN", "sessions.revokeAll")).toBe("全部撤销")
     expect(translate("zh-CN", "sessions.working")).toBe("处理中…")
     expect(translate("zh-CN", "sessions.revokeFailed")).toBe("会话撤销失败")
+    expect(translate("zh-CN", "sessions.revokeErrorDescription")).toBe(
+      "无法撤销会话，请重试。",
+    )
   })
 })

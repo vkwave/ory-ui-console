@@ -93,15 +93,36 @@ describe("identity action UI", () => {
   })
 
   it("shows a bounded failure when revoking all sessions fails", async () => {
-    mocks.mutateConsole.mockRejectedValueOnce(new Error("session_revoke_failed"))
+    const upstreamDetail = `access_token=private-token&client_secret=private-secret_${"x".repeat(2_048)}`
+    mocks.mutateConsole.mockRejectedValueOnce(new Error(upstreamDetail))
     render(
       <RevokeAllSessionsButton identityID="identity-1" readOnly={false} />,
     )
 
     fireEvent.click(screen.getByRole("button", { name: "Revoke all" }))
 
-    expect(await screen.findByText("session_revoke_failed")).toBeInTheDocument()
+    expect(
+      await screen.findByText("The sessions could not be revoked. Try again."),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(upstreamDetail)).not.toBeInTheDocument()
+    expect(screen.queryByText(/access_token=/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/client_secret=/)).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Revoke all" })).toBeEnabled()
+  })
+
+  it("localizes the revoke-all failure without exposing provider details", async () => {
+    mocks.mutateConsole.mockRejectedValueOnce(new Error("private_provider_detail"))
+    render(
+      <LocaleProvider locale="zh-CN">
+        <RevokeAllSessionsButton identityID="identity-1" readOnly={false} />
+      </LocaleProvider>,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "全部撤销" }))
+
+    expect(await screen.findByText("会话撤销失败")).toBeInTheDocument()
+    expect(screen.getByText("无法撤销会话，请重试。")).toBeInTheDocument()
+    expect(screen.queryByText("private_provider_detail")).not.toBeInTheDocument()
   })
 
   it("localizes the revoke-all action and pending state", async () => {

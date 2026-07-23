@@ -200,18 +200,18 @@ export function RevokeAllSessionsButton({
 }) {
   const t = useTranslate()
   const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState(false)
   const revoke = async () => {
     setPending(true)
-    setError(null)
+    setError(false)
     try {
       await mutateConsole(`/api/kratos/identities/${identityID}/sessions`, {
         method: "DELETE",
         body: {},
       })
       window.location.reload()
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "operation_failed")
+    } catch {
+      setError(true)
     } finally {
       setPending(false)
     }
@@ -231,7 +231,9 @@ export function RevokeAllSessionsButton({
         <Alert variant="destructive" className="max-w-sm">
           <CircleAlertIcon />
           <AlertTitle>{t("sessions.revokeFailed")}</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            {t("sessions.revokeErrorDescription")}
+          </AlertDescription>
         </Alert>
       )}
     </div>
