@@ -1,25 +1,36 @@
-import type { Metadata } from "next";
-import { ThemeProvider } from "@/components/theme-provider";
-import "./globals.css";
+import type { Metadata } from "next"
+
+import { LocaleProvider } from "@/components/locale-provider"
+import { ThemeProvider } from "@/components/theme-provider"
+import { getLocale } from "@/lib/i18n-server"
+
+import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "Ory Console",
-  description: "Admin console for Ory Kratos, Hydra, and Keto",
-};
+  title: "VKWAVE Auth Console",
+  description: "VKWAVE administrator console for Kratos, Hydra, and MCP",
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const locale = await getLocale()
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale === "zh-CN" ? "zh-CN" : "en"} suppressHydrationWarning>
       <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+        <LocaleProvider locale={locale}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+        </LocaleProvider>
       </body>
     </html>
-  );
+  )
 }

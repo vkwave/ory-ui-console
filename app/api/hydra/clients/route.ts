@@ -1,16 +1,29 @@
-import { NextRequest, NextResponse } from "next/server";
-import { hydra } from "@/lib/ory/hydra";
-import { getSession } from "@/lib/session";
+import { oauthClientFormSchema } from "@/lib/hydra/client-schema"
+import { clientOperations } from "@/lib/hydra/client-operations"
+import { safeErrorResponse } from "@/lib/security/errors"
+import { runAuditedOperation } from "@/lib/security/operation"
+import { requireMutation } from "@/lib/security/request"
 
-export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session.admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export const POST = async (request: Request): Promise<Response> => {
   try {
-    const body = await req.json();
-    const client = await hydra.createClient(body);
-    return NextResponse.json(client, { status: 201 });
+    const mutation = await requireMutation(
+      request,
+      oauthClientFormSchema,
+    )
+    const client = await runAuditedOperation({
+      request,
+      ...mutation,
+      action: "oauth_client.create",
+      targetType: "oauth_client",
+      targetID: mutation.body.client_id,
+      after: { client_id: mutation.body.client_id },
+      operation: () => clientOperations.create(mutation.body),
+    })
+    return Response.json(client, {
+      status: 201,
+      headers: { "Cache-Control": "no-store" },
+    })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return safeErrorResponse(error)
   }
 }

@@ -1,0 +1,125 @@
+name: release-vkwave-ory-ui-console
+
+on:
+  push:
+    tags:
+      - "1.0.0-vkwave.*"
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
+env:
+  IMAGE: ghcr.io/vkwave/ory-ui-console
+  FIXTURE: test/fixtures/cimd/integration-client.json
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Validate reviewed release source
+        id: source
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^1\.0\.0-vkwave\.[1-9][0-9]*$ ]]
+          git fetch origin main --no-tags
+          git merge-base --is-ancestor HEAD origin/main
+          test "$(git rev-list -n 1 "$RELEASE_TAG")" = "$(git rev-parse HEAD)"
+          fixture_client_id="$(node -p "require('./${FIXTURE}').client_id")"
+          test "$fixture_client_id" = "https://raw.githubusercontent.com/vkwave/ory-ui-console/1.0.0-vkwave.1/test/fixtures/cimd/integration-client.json"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "fixture_sha256=$(sha256sum "$FIXTURE" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build:bootstrap
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Refuse an existing immutable release tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if docker buildx imagetools inspect "${IMAGE}:${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "GHCR release tag already exists: ${IMAGE}:${RELEASE_TAG}" >&2
+            exit 1
+          fi
+      - id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          outputs: >-
+            type=image,name=${{ env.IMAGE }},push-by-digest=true,
+            name-canonical=true,push=true
+          provenance: mode=max
+          sbom: true
+      - uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          image: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+      - name: Record release provenance
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_COMMIT: ${{ steps.source.outputs.commit }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          FIXTURE_SHA256: ${{ steps.source.outputs.fixture_sha256 }}
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const value = {
+              tag: process.env.RELEASE_TAG,
+              commit: process.env.RELEASE_COMMIT,
+              image: process.env.IMAGE + "@" + process.env.IMAGE_DIGEST,
+              fixture: process.env.FIXTURE,
+              fixture_sha256: process.env.FIXTURE_SHA256,
+            };
+            fs.writeFileSync("release-provenance.json", JSON.stringify(value, null, 2) + "\\n");
+          '
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-provenance-${{ github.ref_name }}
+          path: |
+            release-provenance.json
+            sbom.spdx.json
+      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+      - name: Sign immutable image digest
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: cosign sign --yes "${IMAGE}@${IMAGE_DIGEST}"
+      - name: Publish immutable release tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          if docker buildx imagetools inspect "${IMAGE}:${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "GHCR release tag appeared during the build: ${IMAGE}:${RELEASE_TAG}" >&2
+            exit 1
+          fi
+          docker buildx imagetools create --tag "${IMAGE}:${RELEASE_TAG}" "${IMAGE}@${IMAGE_DIGEST}"

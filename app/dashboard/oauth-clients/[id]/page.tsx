@@ -1,88 +1,202 @@
-import { hydra } from "@/lib/ory/hydra";
-import { JsonViewer } from "@/components/json-viewer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/page-header";
+import {
+  CircleAlertIcon,
+  InfoIcon,
+  ShieldAlertIcon,
+} from "lucide-react"
 
-export const dynamic = "force-dynamic";
+import { ClientActions } from "@/app/dashboard/oauth-clients/client-actions"
+import { ClientForm } from "@/app/dashboard/oauth-clients/client-form"
+import { PageHeader } from "@/components/page-header"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  adapterLifecycle,
+  disabledSnapshot,
+} from "@/lib/hydra/lifecycle"
+import { requireAdmin } from "@/lib/auth/require-admin"
+import { checkOryHealth, type OryHealth } from "@/lib/ory/health"
+import { hydra } from "@/lib/ory/hydra"
+import { fmtDate } from "@/lib/utils"
+
+export const dynamic = "force-dynamic"
+
+const unavailable: OryHealth = {
+  hydra: false,
+  kratos: false,
+  degraded: true,
+  readOnly: true,
+}
 
 export default async function ClientDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string }>
 }) {
-  const { id } = await params;
-  const decodedId = decodeURIComponent(id);
-  let client = null;
-  let error: string | null = null;
-  try {
-    client = await hydra.getClient(decodedId);
-  } catch (e) {
-    error = String(e);
+  await requireAdmin(false)
+  const { id } = await params
+  const clientID = decodeURIComponent(id)
+  const [healthResult, clientResult] = await Promise.allSettled([
+    checkOryHealth(),
+    hydra.getClient(clientID),
+  ])
+  const health =
+    healthResult.status === "fulfilled" ? healthResult.value : unavailable
+
+  if (clientResult.status === "rejected") {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          eyebrow="Hydra client"
+          title={<span className="break-all font-mono text-2xl">{clientID}</span>}
+          className="mb-0"
+        />
+        <Alert variant="destructive">
+          <CircleAlertIcon />
+          <AlertTitle>Client could not be loaded</AlertTitle>
+          <AlertDescription>
+            The client does not exist or Hydra is unavailable.
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
   }
 
-  if (error || !client) {
-    return (
-      <div>
-        <PageHeader
-          eyebrow="Hydra Client"
-          title={<span className="break-all font-mono text-2xl">{decodedId}</span>}
-          className="mb-6"
-        />
-        <p className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{error ?? "Client not found."}</p>
-      </div>
-    );
-  }
+  const client = clientResult.value
+  const lifecycle = adapterLifecycle(client)
+  const disabled = disabledSnapshot(client)
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
-        eyebrow="Hydra Client"
-        title={<span className="break-all font-mono text-2xl">{decodedId}</span>}
-        description="Review OAuth2 client settings, grant types, scopes, and raw Hydra metadata."
+        eyebrow="Hydra client"
+        title={<span className="break-all font-mono text-2xl">{clientID}</span>}
+        description="Review ownership, exact redirects, grants, scopes, and lifecycle controls."
         className="mb-0"
+        actions={
+          !health.readOnly && (
+            <ClientActions
+              clientID={clientID}
+              managedGeneration={lifecycle?.generation}
+              disabled={disabled !== null}
+            />
+          )
+        }
       />
 
+      {health.readOnly && (
+        <Alert variant="destructive">
+          <ShieldAlertIcon />
+          <AlertTitle>Administrator APIs are degraded</AlertTitle>
+          <AlertDescription>
+            This client is read-only until both Hydra and Kratos are healthy.
+          </AlertDescription>
+        </Alert>
+      )}
+      {lifecycle && (
+        <Alert>
+          <InfoIcon />
+          <AlertTitle>Adapter-managed client</AlertTitle>
+          <AlertDescription>
+            Direct editing, rotation, disable, and deletion are blocked. Use
+            generation-checked promotion to transfer ownership to the console.
+          </AlertDescription>
+        </Alert>
+      )}
+      {disabled && (
+        <Alert>
+          <InfoIcon />
+          <AlertTitle>Client disabled</AlertTitle>
+          <AlertDescription>
+            Redirects and grants were removed at {fmtDate(disabled.disabled_at)}.
+            Re-enable restores only the validated non-secret snapshot.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {lifecycle && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Adapter lifecycle</CardTitle>
+            <CardDescription>
+              Read-only ownership metadata supplied by the MCP OAuth adapter.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Source</p>
+              <Badge variant="secondary">{lifecycle.source}</Badge>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Generation</p>
+              <p className="break-all font-mono text-sm">{lifecycle.generation}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Lease until</p>
+              <p className="text-sm">{fmtDate(lifecycle.lease_until)}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
-        <CardHeader><CardTitle>Details</CardTitle></CardHeader>
-        <CardContent className="grid gap-4 text-sm">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-              <p className="text-xs text-muted-foreground">Name</p>
-              <p className="mt-1 font-medium">{client.client_name || "—"}</p>
+        <CardHeader>
+          <CardTitle>Client details</CardTitle>
+          <CardDescription>
+            Curated non-secret fields returned by the Hydra administrator API.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-5 text-sm">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <p className="text-muted-foreground">Name</p>
+              <p>{client.client_name || "—"}</p>
             </div>
-            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-              <p className="text-xs text-muted-foreground">Scope</p>
-              <p className="mt-1 font-medium">{client.scope || "—"}</p>
+            <div>
+              <p className="text-muted-foreground">Scope</p>
+              <p>{client.scope || "—"}</p>
             </div>
-            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-              <p className="text-xs text-muted-foreground">Token Endpoint Auth</p>
-              <p className="mt-1 font-medium">{client.token_endpoint_auth_method || "—"}</p>
+            <div>
+              <p className="text-muted-foreground">Token authentication</p>
+              <p>{client.token_endpoint_auth_method || "—"}</p>
             </div>
           </div>
-          <div className="space-y-2">
-            <p className="font-medium">Grant Types</p>
+          <div className="flex flex-col gap-2">
+            <p>Grant types</p>
             <div className="flex flex-wrap gap-1.5">
-              {(client.grant_types ?? []).map((g) => (
-                <Badge key={g} variant="secondary">{g}</Badge>
+              {client.grant_types.map((grant) => (
+                <Badge key={grant} variant="secondary">
+                  {grant}
+                </Badge>
               ))}
             </div>
           </div>
-          <div>
-            <span className="font-medium">Redirect URIs</span>
-            <ul className="mt-2 space-y-1 rounded-xl border border-border/50 bg-muted/20 p-3 text-muted-foreground">
-              {(client.redirect_uris ?? []).map((u) => <li key={u}>{u}</li>)}
+          <div className="flex flex-col gap-2">
+            <p>Redirect URIs</p>
+            <ul className="flex flex-col gap-1 text-muted-foreground">
+              {client.redirect_uris.map((redirectURI) => (
+                <li key={redirectURI} className="break-all font-mono text-xs">
+                  {redirectURI}
+                </li>
+              ))}
             </ul>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Raw JSON</CardTitle></CardHeader>
-        <CardContent>
-          <JsonViewer data={client} />
-        </CardContent>
-      </Card>
+      {!health.readOnly && !lifecycle && !disabled && (
+        <ClientForm mode="edit" client={client} />
+      )}
     </div>
-  );
+  )
 }

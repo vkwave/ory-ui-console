@@ -1,21 +1,48 @@
-import { getIronSession, SessionOptions } from "iron-session";
-import { cookies } from "next/headers";
+import "server-only"
+
+import { randomBytes } from "node:crypto"
+
+import { getIronSession, type SessionOptions } from "iron-session"
+import { cookies } from "next/headers"
+
+import { loadConfig } from "@/lib/config"
 
 export interface SessionData {
-  admin?: { email: string };
+  pending?: {
+    state: string
+    nonce: string
+    codeVerifier: string
+    createdAt: number
+  }
+  admin?: {
+    subject: string
+    acr: string
+    roles: string[]
+    authenticatedAt: number
+    roleCheckedAt: number
+    csrfToken: string
+  }
 }
 
-export const sessionOptions: SessionOptions = {
-  cookieName: process.env.SESSION_COOKIE_NAME ?? "ory_console_session",
-  password: process.env.SESSION_SECRET ?? "fallback-dev-secret-must-be-32-chars",
-  cookieOptions: {
-    secure: process.env.NODE_ENV === "production",
-    httpOnly: true,
-    sameSite: "lax",
-  },
-};
-
-export async function getSession() {
-  const cookieStore = await cookies();
-  return getIronSession<SessionData>(cookieStore, sessionOptions);
+export const sessionOptions = (
+  env: NodeJS.ProcessEnv = process.env,
+): SessionOptions => {
+  const config = loadConfig(env)
+  return {
+    cookieName: config.sessionCookieName,
+    password: config.sessionSecret,
+    ttl: 8 * 60 * 60,
+    cookieOptions: {
+      secure: config.secureCookie,
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+    },
+  }
 }
+
+export const getSession = async () =>
+  getIronSession<SessionData>(await cookies(), sessionOptions())
+
+export const newCSRFToken = (): string =>
+  randomBytes(32).toString("base64url")

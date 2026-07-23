@@ -1,30 +1,53 @@
-import { NextRequest, NextResponse } from "next/server";
-import { hydra } from "@/lib/ory/hydra";
-import { getSession } from "@/lib/session";
+import { z } from "zod"
 
-export async function GET(req: NextRequest) {
-  const session = await getSession();
-  if (!session.admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const subject = req.nextUrl.searchParams.get("subject") ?? "";
+import { requireAdmin } from "@/lib/auth/require-admin"
+import { hydra } from "@/lib/ory/hydra"
+import { safeErrorResponse } from "@/lib/security/errors"
+import { runAuditedOperation } from "@/lib/security/operation"
+import { requireMutation } from "@/lib/security/request"
+
+const subjectSchema = z.string().min(1).max(256)
+const revokeSchema = z
+  .object({
+    subject: subjectSchema,
+    client: z.string().min(1).max(256).optional(),
+  })
+  .strict()
+
+export const GET = async (request: Request): Promise<Response> => {
   try {
-    const data = await hydra.listConsentSessions(subject);
-    return NextResponse.json(data);
+    await requireAdmin(false)
+    const subject = subjectSchema.parse(new URL(request.url).searchParams.get("subject"))
+    const sessions = await hydra.listConsentSessions(subject)
+    return Response.json(sessions, {
+      headers: { "Cache-Control": "no-store" },
+    })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return safeErrorResponse(error)
   }
 }
 
-export async function DELETE(req: NextRequest) {
-  const session = await getSession();
-  if (!session.admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const subject = req.nextUrl.searchParams.get("subject") ?? "";
-  const client = req.nextUrl.searchParams.get("client") ?? undefined;
+export const DELETE = async (request: Request): Promise<Response> => {
   try {
-    await hydra.revokeConsentSessions(subject, client);
-    return NextResponse.json({ ok: true });
+    const mutation = await requireMutation(request, revokeSchema)
+    await runAuditedOperation({
+      request,
+      ...mutation,
+      action: "consent.revoke",
+      targetType: "identity",
+      targetID: mutation.body.subject,
+      before: {
+        identity_id: mutation.body.subject,
+        client_id: mutation.body.client ?? null,
+      },
+      operation: () =>
+        hydra.revokeConsentSessions(
+          mutation.body.subject,
+          mutation.body.client,
+        ),
+    })
+    return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return safeErrorResponse(error)
   }
 }

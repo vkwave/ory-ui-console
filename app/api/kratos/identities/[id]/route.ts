@@ -1,19 +1,65 @@
-import { NextRequest, NextResponse } from "next/server";
-import { kratos } from "@/lib/ory/kratos";
-import { getSession } from "@/lib/session";
+import { z } from "zod"
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getSession();
-  if (!session.admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+import { identityOperations } from "@/lib/kratos/identity-operations"
+import { safeErrorResponse } from "@/lib/security/errors"
+import { runAuditedOperation } from "@/lib/security/operation"
+import { requireMutation } from "@/lib/security/request"
+
+interface RouteContext {
+  params: Promise<{ id: string }>
+}
+
+const stateSchema = z.object({ state: z.enum(["active", "inactive"]) }).strict()
+const confirmationSchema = z.object({ confirmation: z.string().min(1) }).strict()
+
+export const PATCH = async (
+  request: Request,
+  context: RouteContext,
+): Promise<Response> => {
   try {
-    const { id } = await params;
-    await kratos.deleteIdentity(id);
-    return NextResponse.json({ ok: true });
+    const { id } = await context.params
+    const mutation = await requireMutation(request, stateSchema)
+    const identity = await runAuditedOperation({
+      request,
+      ...mutation,
+      action: "identity.state.update",
+      targetType: "identity",
+      targetID: id,
+      before: { identity_id: id },
+      after: { identity_id: id, state: mutation.body.state },
+      operation: () => identityOperations.updateState(id, mutation.body.state),
+    })
+    return Response.json(identity, {
+      headers: { "Cache-Control": "no-store" },
+    })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return safeErrorResponse(error)
+  }
+}
+
+export const DELETE = async (
+  request: Request,
+  context: RouteContext,
+): Promise<Response> => {
+  try {
+    const { id } = await context.params
+    const mutation = await requireMutation(request, confirmationSchema)
+    await runAuditedOperation({
+      request,
+      ...mutation,
+      action: "identity.delete",
+      targetType: "identity",
+      targetID: id,
+      before: { identity_id: id },
+      operation: () =>
+        identityOperations.delete(
+          id,
+          mutation.body.confirmation,
+          mutation.admin.subject,
+        ),
+    })
+    return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } })
+  } catch (error) {
+    return safeErrorResponse(error)
   }
 }

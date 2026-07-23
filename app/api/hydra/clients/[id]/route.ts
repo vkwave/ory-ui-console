@@ -1,19 +1,60 @@
-import { NextRequest, NextResponse } from "next/server";
-import { hydra } from "@/lib/ory/hydra";
-import { getSession } from "@/lib/session";
+import { z } from "zod"
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getSession();
-  if (!session.admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+import { clientOperations } from "@/lib/hydra/client-operations"
+import { oauthClientFormSchema } from "@/lib/hydra/client-schema"
+import { safeErrorResponse } from "@/lib/security/errors"
+import { runAuditedOperation } from "@/lib/security/operation"
+import { requireMutation } from "@/lib/security/request"
+
+interface RouteContext {
+  params: Promise<{ id: string }>
+}
+
+const confirmationSchema = z.object({ confirmation: z.string().min(1) }).strict()
+
+export const PUT = async (
+  request: Request,
+  context: RouteContext,
+): Promise<Response> => {
   try {
-    const { id } = await params;
-    await hydra.deleteClient(id);
-    return NextResponse.json({ ok: true });
+    const { id } = await context.params
+    const mutation = await requireMutation(request, oauthClientFormSchema)
+    const client = await runAuditedOperation({
+      request,
+      ...mutation,
+      action: "oauth_client.update",
+      targetType: "oauth_client",
+      targetID: id,
+      before: { client_id: id },
+      after: { client_id: id },
+      operation: () => clientOperations.update(id, mutation.body),
+    })
+    return Response.json(client, {
+      headers: { "Cache-Control": "no-store" },
+    })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return safeErrorResponse(error)
+  }
+}
+
+export const DELETE = async (
+  request: Request,
+  context: RouteContext,
+): Promise<Response> => {
+  try {
+    const { id } = await context.params
+    const mutation = await requireMutation(request, confirmationSchema)
+    await runAuditedOperation({
+      request,
+      ...mutation,
+      action: "oauth_client.delete",
+      targetType: "oauth_client",
+      targetID: id,
+      before: { client_id: id },
+      operation: () => clientOperations.delete(id, mutation.body.confirmation),
+    })
+    return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } })
+  } catch (error) {
+    return safeErrorResponse(error)
   }
 }

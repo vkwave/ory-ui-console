@@ -4,4 +4,12 @@ node_modules
 .env.local
 *.md
 Dockerfile
+e2e
+test
+.github
+dist
+.next
+playwright.config.ts
+vitest.config.ts
+vitest.setup.ts
 docker-compose.yml

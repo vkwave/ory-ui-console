@@ -1,47 +1,68 @@
-import { kratos, KratosSchema } from "@/lib/ory/kratos";
-import { DataTable, Column } from "@/components/data-table";
-import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/page-header";
-import Link from "next/link";
+import Link from "next/link"
 
-export const dynamic = "force-dynamic";
+import { CircleAlertIcon, EyeIcon } from "lucide-react"
+
+import { DataTable, type Column } from "@/components/data-table"
+import { PageHeader } from "@/components/page-header"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { requireAdmin } from "@/lib/auth/require-admin"
+import { kratos, type KratosSchema } from "@/lib/ory/kratos"
+
+export const dynamic = "force-dynamic"
 
 export default async function SchemasPage() {
-  let schemas: KratosSchema[] = [];
-  let error: string | null = null;
-  try {
-    schemas = await kratos.listSchemas();
-  } catch (e) {
-    error = String(e);
-  }
-
+  await requireAdmin(false)
+  const result = await kratos.listSchemas().then(
+    (schemas) => ({ schemas, error: false }),
+    () => ({ schemas: [] as KratosSchema[], error: true }),
+  )
   const columns: Column<KratosSchema>[] = [
-    { key: "id", header: "Schema ID", cell: (s) => s.id },
+    { key: "id", header: "Schema ID", cell: (schema) => schema.id },
     {
       key: "view",
       header: "",
-      cell: (s) => (
-        <Link href={`/dashboard/schemas/${encodeURIComponent(s.id)}`}>
-          <Button size="sm" variant="outline">View</Button>
-        </Link>
+      cell: (schema) => (
+        <Button
+          size="sm"
+          variant="outline"
+          nativeButton={false}
+          render={
+            <Link href={`/dashboard/schemas/${encodeURIComponent(schema.id)}`} />
+          }
+        >
+          <EyeIcon data-icon="inline-start" />
+          View
+        </Button>
       ),
     },
-  ];
+  ]
 
   return (
-    <div>
+    <div className="flex flex-col gap-6">
       <PageHeader
         eyebrow="Kratos"
-        title="Identity Schemas"
-        description="Open schema definitions used to validate identity traits and profile data."
+        title="Identity schemas"
+        description="Read-only schema definitions managed through deployment configuration."
+        className="mb-0"
       />
-      {error && <p className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+      {result.error && (
+        <Alert variant="destructive">
+          <CircleAlertIcon />
+          <AlertTitle>Schemas could not be loaded</AlertTitle>
+          <AlertDescription>The Kratos administrator API is unavailable.</AlertDescription>
+        </Alert>
+      )}
       <DataTable
         columns={columns}
-        data={schemas}
-        keyExtractor={(s) => s.id}
-        emptyMessage="No schemas found."
+        data={result.schemas}
+        keyExtractor={(schema) => schema.id}
+        emptyMessage="No identity schemas found."
       />
     </div>
-  );
+  )
 }
