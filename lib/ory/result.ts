@@ -30,6 +30,15 @@ export class OryAdminError extends Error {
 const statusFrom = (error: unknown): number => {
   if (!error || typeof error !== "object") return 503
 
+  const directStatus = (error as { status?: unknown }).status
+  if (
+    typeof directStatus === "number" &&
+    directStatus >= 400 &&
+    directStatus <= 599
+  ) {
+    return directStatus
+  }
+
   const response = (error as { response?: unknown }).response
   if (!response || typeof response !== "object") return 503
 

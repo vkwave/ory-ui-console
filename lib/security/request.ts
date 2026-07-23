@@ -49,9 +49,7 @@ export const readLimitedJSON = async <T>(
     }
     chunks.push(value)
   }
-  const body = Buffer.concat(chunks.map((chunk) => Buffer.from(chunk))).toString(
-    "utf8",
-  )
+  const body = Buffer.concat(chunks).toString("utf8")
   return schema.parse(JSON.parse(body || "{}"))
 }
 
@@ -65,17 +63,17 @@ export const requireMutation = async <T>(
   overrides: MutationDependencies = {},
 ) => {
   const config = loadConfig(overrides.env)
-  const admin = await requireAdmin(true)
   if (request.headers.get("origin") !== config.adminOrigin.origin) {
     throw new Response("forbidden origin", { status: 403 })
-  }
-  const token = request.headers.get("x-csrf-token") || ""
-  if (!equal(token, admin.csrfToken)) {
-    throw new Response("invalid csrf token", { status: 403 })
   }
   const idempotencyKey = request.headers.get("idempotency-key") || ""
   if (!/^[A-Za-z0-9_-]{16,128}$/.test(idempotencyKey)) {
     throw new Response("invalid idempotency key", { status: 400 })
+  }
+  const admin = await requireAdmin(true)
+  const token = request.headers.get("x-csrf-token") || ""
+  if (!equal(token, admin.csrfToken)) {
+    throw new Response("invalid csrf token", { status: 403 })
   }
   return {
     admin,

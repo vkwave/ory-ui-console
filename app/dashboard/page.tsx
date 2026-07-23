@@ -111,7 +111,9 @@ export default async function DashboardPage() {
             </div>
             <div>
               <p className="font-medium">MCP OAuth Adapter</p>
-              <p className="text-sm text-muted-foreground">MCP client lifecycle</p>
+              <p className="text-sm text-muted-foreground">
+                {t("dashboard.mcpHint")}
+              </p>
             </div>
           </CardContent>
         </Card>

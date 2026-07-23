@@ -1,8 +1,20 @@
-import { cleanup, render, screen } from "@testing-library/react"
-import { afterEach, describe, expect, it } from "vitest"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { afterEach, describe, expect, it, vi } from "vitest"
+
+const mocks = vi.hoisted(() => ({
+  mutateConsole: vi.fn(),
+}))
+
+vi.mock("@/app/dashboard/oauth-clients/mutation", () => ({
+  mutateConsole: mocks.mutateConsole,
+}))
 
 import { UserRoles } from "@/app/dashboard/users/[id]/user-roles"
-import { IdentityActions } from "@/app/dashboard/users/[id]/identity-actions"
+import {
+  IdentityActions,
+  RevokeAllSessionsButton,
+} from "@/app/dashboard/users/[id]/identity-actions"
+import { LocaleProvider } from "@/components/locale-provider"
 
 describe("identity role UI", () => {
   afterEach(cleanup)
@@ -44,7 +56,10 @@ describe("identity role UI", () => {
 })
 
 describe("identity action UI", () => {
-  afterEach(cleanup)
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
+  })
 
   it("renders state and typed deletion controls only when writable", () => {
     render(
@@ -75,5 +90,31 @@ describe("identity action UI", () => {
     expect(
       screen.queryByRole("button", { name: "Delete identity" }),
     ).not.toBeInTheDocument()
+  })
+
+  it("shows a bounded failure when revoking all sessions fails", async () => {
+    mocks.mutateConsole.mockRejectedValueOnce(new Error("session_revoke_failed"))
+    render(
+      <RevokeAllSessionsButton identityID="identity-1" readOnly={false} />,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Revoke all" }))
+
+    expect(await screen.findByText("session_revoke_failed")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Revoke all" })).toBeEnabled()
+  })
+
+  it("localizes the revoke-all action and pending state", async () => {
+    mocks.mutateConsole.mockImplementationOnce(() => new Promise(() => {}))
+    render(
+      <LocaleProvider locale="zh-CN">
+        <RevokeAllSessionsButton identityID="identity-1" readOnly={false} />
+      </LocaleProvider>,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "全部撤销" }))
+
+    const pendingLabel = await screen.findByText("处理中…")
+    expect(pendingLabel.closest("button")).toBeDisabled()
   })
 })

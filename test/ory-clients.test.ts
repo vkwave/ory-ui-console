@@ -178,6 +178,20 @@ describe("official ORY clients", () => {
     expect(JSON.stringify(error)).not.toMatch(/secret|raw upstream details/)
   })
 
+  it("preserves a direct HTTP status without exposing upstream details", () => {
+    const error = normalizeOryError({
+      status: 429,
+      body: { access_token: "secret", error: "raw upstream details" },
+    })
+
+    expect(error).toMatchObject({
+      status: 429,
+      code: "ory_rate_limited",
+      message: "ORY administrator API request failed",
+    })
+    expect(JSON.stringify(error)).not.toMatch(/secret|raw upstream details/)
+  })
+
   it("checks each fixed health endpoint once and enters read-only mode", async () => {
     const requestSpy = vi.fn(async (input: string | URL | Request) =>
       String(input).includes("hydra-admin")

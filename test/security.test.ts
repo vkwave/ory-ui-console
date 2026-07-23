@@ -69,6 +69,17 @@ describe("console mutation boundary", () => {
     ).rejects.toBeInstanceOf(Response)
   })
 
+  it.each([
+    ["wrong origin", { origin: "https://evil.example.test" }],
+    ["short idempotency key", { idempotencyKey: "short" }],
+  ])("rejects %s before querying the administrator role", async (_name, overrides) => {
+    await expect(
+      requireMutation(request(overrides), schema, { env: validEnv }),
+    ).rejects.toBeInstanceOf(Response)
+
+    expect(mocks.requireAdmin).not.toHaveBeenCalled()
+  })
+
   it("rejects a streamed body larger than 64 KiB", async () => {
     await expect(
       requireMutation(
@@ -98,10 +109,12 @@ describe("security output boundaries", () => {
       {
         client_id: "client-1",
         client_secret: "must-not-appear",
+        api_key: "must-not-appear",
+        privateKey: "must-not-appear",
         email: "must-not-appear@example.test",
         nested: { credential: "must-not-appear" },
       },
-      ["client_id", "client_secret", "email", "nested"],
+      ["client_id", "client_secret", "api_key", "privateKey", "email", "nested"],
     )
 
     expect(summary).toEqual({ client_id: "client-1" })
@@ -119,8 +132,26 @@ describe("security output boundaries", () => {
     const event = JSON.parse(String(write.mock.calls[0][0]))
     expect(event.before).toEqual({ client_id: "client-1" })
     expect(JSON.stringify(event)).not.toMatch(
-      /must-not-appear|client_secret|email|credential/,
+      /must-not-appear|client_secret|api_key|privateKey|email|credential/,
     )
+    write.mockRestore()
+  })
+
+  it("bounds request IDs before writing structured audit logs", () => {
+    const write = vi.spyOn(process.stdout, "write").mockReturnValue(true)
+
+    audit({
+      actorSubject: "identity-1",
+      action: "client.update",
+      targetType: "oauth_client",
+      targetID: "client-1",
+      requestID: "r".repeat(1_024),
+      result: "success",
+      idempotencyKey: "request_key_123456",
+    })
+
+    const event = JSON.parse(String(write.mock.calls[0][0]))
+    expect(event.requestID).toBe("r".repeat(128))
     write.mockRestore()
   })
 

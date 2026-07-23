@@ -23,6 +23,7 @@ export const audit = (event: AuditEvent): void => {
       occurred_at: new Date().toISOString(),
       ...safeEvent,
       clientAddress: event.clientAddress?.slice(0, 64),
+      requestID: event.requestID.slice(0, 128),
       before: safeSummary(before, Object.keys(before ?? {})),
       after: safeSummary(after, Object.keys(after ?? {})),
     })}\n`,

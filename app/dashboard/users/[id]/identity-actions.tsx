@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 
 import { mutateConsole } from "@/app/dashboard/oauth-clients/mutation"
+import { useTranslate } from "@/components/locale-provider"
 import {
   Alert,
   AlertDescription,
@@ -197,28 +198,42 @@ export function RevokeAllSessionsButton({
   identityID: string
   readOnly: boolean
 }) {
+  const t = useTranslate()
   const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const revoke = async () => {
     setPending(true)
+    setError(null)
     try {
       await mutateConsole(`/api/kratos/identities/${identityID}/sessions`, {
         method: "DELETE",
         body: {},
       })
       window.location.reload()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "operation_failed")
     } finally {
       setPending(false)
     }
   }
   return (
-    <Button
-      variant="destructive"
-      size="sm"
-      onClick={revoke}
-      disabled={readOnly || pending}
-    >
-      {pending && <Spinner data-icon="inline-start" />}
-      {pending ? "Working…" : "Revoke all"}
-    </Button>
+    <div className="flex flex-col items-end gap-2">
+      <Button
+        variant="destructive"
+        size="sm"
+        onClick={revoke}
+        disabled={readOnly || pending}
+      >
+        {pending && <Spinner data-icon="inline-start" />}
+        {pending ? t("sessions.working") : t("sessions.revokeAll")}
+      </Button>
+      {error && (
+        <Alert variant="destructive" className="max-w-sm">
+          <CircleAlertIcon />
+          <AlertTitle>{t("sessions.revokeFailed")}</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+    </div>
   )
 }

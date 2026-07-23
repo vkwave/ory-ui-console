@@ -1,7 +1,8 @@
 export type AuditScalar = string | number | boolean | null
 export type AuditSummary = Readonly<Record<string, AuditScalar>>
 
-const forbidden = /secret|token|code|cookie|password|credential|email|authorization/i
+const forbidden =
+  /secret|token|code|cookie|password|credential|email|authorization|key/i
 
 export const safeSummary = (
   value: Readonly<Record<string, unknown>> | undefined,

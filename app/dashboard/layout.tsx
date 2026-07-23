@@ -9,6 +9,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { requireAdmin } from "@/lib/auth/require-admin"
+import { translate } from "@/lib/i18n"
 import { getLocale } from "@/lib/i18n-server"
 import { MenuIcon } from "lucide-react"
 
@@ -60,7 +61,7 @@ function DashboardShell({
               </SheetContent>
             </Sheet>
             <div className="hidden text-sm text-muted-foreground lg:block">
-              VKWAVE Auth Console
+              {translate(locale, "brand.name")}
             </div>
             <div className="flex items-center gap-1">
               <LanguageToggle locale={locale} />
